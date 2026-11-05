@@ -57,30 +57,72 @@
   .done h2{font-size:1.6rem;margin-bottom:8px}
   .sum{text-align:left;max-width:360px;margin:16px auto 0;font-size:.95rem}
   .sum div{display:flex;justify-content:space-between;padding:3px 0}
+  .intro h2{font-size:1.15rem}
+  .intro p{margin:10px 0}
+  .intro ul{padding-left:20px;margin:10px 0}
+  .intro li{margin-bottom:10px;font-size:.92rem}
+  .intro a{color:var(--accent-dark);font-weight:600}
+  .check{display:flex;gap:10px;align-items:center;margin-top:12px;cursor:pointer;font-weight:600;font-size:.95rem}
+  .check input{width:18px;height:18px;accent-color:var(--accent)}
+  .notice{background:var(--warn-bg);border:1.5px solid var(--accent);color:var(--warn-ink);border-radius:14px;padding:14px 18px;margin-bottom:18px;font-weight:600;font-size:.95rem}
+  .notice div+div{margin-top:8px}
   .hidden{display:none!important}
 </style>
 </head>
 <body>
 <div class="wrap" id="app">
-  <img class="banner" src="banner .png" alt="Be A Blessing Sourdough: Where daily bread, wellness, &amp; faith come together">
+  <img class="banner" src="banner.png" alt="Be A Blessing Sourdough: Where daily bread, wellness, &amp; faith come together">
   <div id="form">
+    <div class="notice hidden" id="notice"></div>
+    <div class="card intro">
+      <h2>Welcome to Be A Blessing Sourdough! 🍞✨</h2>
+      <p>Please fill out this form to reserve your fresh sourdough items or holiday bundles.</p>
+      <ul>
+        <li><strong>Limited Weekly quantity:</strong> it's only me (Lis) in the kitchen so my quantities are limited. If an option isn't available, it means we've sold out of that category for the week. Check back next week or reach out to see if we can find another time that works!</li>
+        <li>⏰ <strong>Order Cutoff:</strong> All custom and Wednesday orders require at least <strong>48 hours advance notice</strong> (Orders close Monday at 5:00 PM for Wednesday pickup).</li>
+        <li>🌾 <strong>Freshness Guarantee:</strong> All breads, cookies, and specialty items are long-fermented overnight for maximum digestibility and baked fresh the morning of your pickup!</li>
+        <li>💳 <strong>Pre-Payment Required:</strong> After submitting, you will receive a direct message (WhatsApp or email) with Venmo payment details or cash arrangement instructions. Orders are officially locked in once payment is received.</li>
+        <li>📍 <strong>Pickup Location:</strong> Deerwood, MN (Exact porch pickup address provided upon order confirmation).</li>
+      </ul>
+      <p>🔗 <strong>Explore Our Menu &amp; Story:</strong> Visit <a href="https://babs.s.gy/menu" target="_blank" rel="noopener">https://babs.s.gy/menu</a> to view our full menu options and details!</p>
+    </div>
     <div class="card">
       <div class="step">Step 1</div>
-      <h2>When would you like to pick up?</h2>
+      <h2>Preferred Pickup Date &amp; Time Slot <span class="req">*</span></h2>
       <div class="pickups" id="pickups"></div>
       <div class="hint" id="pickupHint"></div>
     </div>
     <div id="cats"></div>
     <div class="card">
-      <div class="step">Step 3</div>
+      <div class="step">Step 3 · Optional</div>
+      <h2>Giving this as a gift?</h2>
+      <p class="hint">I will package it up beautifully for you! Just leave your To/From names or short message here. (+$1.50 per item)<br>Includes festive holiday twine or ribbon, a green sprig or seasonal accent, and a handwritten BABS gift tag.</p>
+      <label class="check"><input type="checkbox" id="f-gift"> Yes, this order is a gift</label>
+      <div class="fields hidden" id="giftFields">
+        <label>To / From names or short message<textarea id="f-giftmsg" rows="3"></textarea></label>
+      </div>
+    </div>
+    <div class="card">
+      <div class="step">Step 4</div>
       <h2>Your details</h2>
       <div class="hint"><span class="req">*</span> Required, so I can reach you about your order.</div>
       <div class="fields">
         <label>Name <span class="req">*</span><input id="f-name" autocomplete="name" required></label>
         <label>Email <span class="req">*</span><input id="f-email" type="email" autocomplete="email" required></label>
         <label>Phone number <span class="req">*</span><input id="f-phone" type="tel" autocomplete="tel" required></label>
-        <label>Notes (allergies, pickup time, etc.)<textarea id="f-notes" rows="3"></textarea></label>
       </div>
+    </div>
+    <div class="card">
+      <div class="step">Step 5</div>
+      <h2>Payment Method Acknowledgement <span class="req">*</span></h2>
+      <div class="pickups" id="payments"></div>
+    </div>
+    <div class="card">
+      <div class="step">Step 6 · Optional</div>
+      <h2>Special Notes Or Requests</h2>
+      <p class="hint"><strong>Can't make the Wednesday pickup window?</strong><br>Looking for a custom order/different drop day? Type your preferred date/time or specific request here! As I kick off BABS, I'm happy to accommodate custom orders whenever my kitchen schedule allows.</p>
+      <p class="hint"><strong>Special Requests</strong><br>Have any special requests, scoring preferences, or notes for your order? Let me know below and I'll do my absolute best to accommodate you!</p>
+      <div class="fields"><label><textarea id="f-notes" rows="4"></textarea></label></div>
       <div class="err hidden" id="err"></div>
     </div>
   </div>
@@ -89,7 +131,7 @@
 
 <div class="bar" id="bar">
   <div class="bar-in">
-    <div class="total"><small>Order total</small><span id="total">$0.00</span></div>
+    <div class="total"><small id="totalNote">Order total</small><span id="total">$0.00</span></div>
     <button class="go" id="submit">Place order</button>
   </div>
 </div>
@@ -104,36 +146,48 @@ const CONFIG = {
   scriptUrl: "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE",
   title: "Be A Blessing Sourdough",
   currency: "$",
+  giftFee: 1.5, // per item, when "Giving this as a gift" is checked
   pickupOptions: [
-    { id: "Wednesday", label: "Wednesday", note: "Limited quantities each week", limited: true },
-    { id: "Other",     label: "Other",     note: "Arrange a different day with me", limited: false }
+    { id: "Wednesday", label: "Standard Wednesday Porch Pickup", note: "3:00 PM – 6:00 PM in Deerwood · limited weekly quantities", limited: true },
+    { id: "Other",     label: "Custom Pickup Day / Time",        note: "Request only, not guaranteed. Add your preferred date/time in the Special Notes section", limited: false }
+  ],
+  paymentOptions: [
+    "Venmo Business @BeABlessingSourdough",
+    "Cash (Dropped off prior to bake cutoff date)"
   ],
   fullMessage: "Thank you so much for the love! We have officially hit our maximum baking capacity for this item. Check back next week, or keep an eye on our WhatsApp community for any extra pop-up loaves!",
   categories: [
-    { name: "Traditional Sourdough Boule", items: [
-      { id: "b1", name: "Classic Country Boule",   desc: "Crusty, tangy, timeless.", price: 9 },
-      { id: "b2", name: "Rosemary Garlic Boule",   desc: "Fresh herbs and roasted garlic.", price: 11 },
-      { id: "b3", name: "Jalapeño Cheddar Boule",  desc: "A little heat, a lot of cheese.", price: 12 }
+    { name: "Traditional Sourdough Boules", items: [
+      { id: "b1", name: "Plain Rustic Boule", desc: "", price: 8 },
+      { id: "b2", name: "Chocolate Chip Boule", desc: "", price: 10 },
+      { id: "b3", name: "Cranberry Almond Boule (Seasonal Nov-Dec)", desc: "", price: 10 },
+      { id: "b4", name: "Sourdough Pumpkin Boule (Seasonal Sept-Nov)", desc: "", price: 12 }
     ]},
-    { name: "Sourdough Sandwich Bread Loaves", items: [
-      { id: "s1", name: "Classic Sandwich Loaf",   desc: "Soft crumb, perfect for toast.", price: 9 },
-      { id: "s2", name: "Honey Wheat Sandwich Loaf", desc: "", price: 10 },
-      { id: "s3", name: "Cinnamon Swirl Loaf",     desc: "", price: 12 }
+    { name: "Everyday Sourdough Sandwich Loaves", items: [
+      { id: "s1", name: "White Sourdough Sandwich Bread (13x5 loaf)", desc: "", price: 10 },
+      { id: "s2", name: "Honey Oat Sourdough Sandwich Bread (13x5 loaf)", desc: "", price: 12 },
+      { id: "s3", name: "Cinnamon Swirl Loaf (13x5 loaf)", desc: "", price: 14 },
+      { id: "s4", name: "Seeded Honey Oat & Wheat Loaf", desc: "", price: 16 }
     ]},
-    { name: "Rolls, Buns & More", items: [
-      { id: "r1", name: "Dinner Rolls (half dozen)", desc: "", price: 8 },
-      { id: "r2", name: "Burger Buns (4 pack)",      desc: "", price: 9 },
-      { id: "r3", name: "Soft Pretzels (4 pack)",    desc: "", price: 10 }
+    { name: "Rolls, Buns & Other", items: [
+      { id: "r1", name: "9 Pack Dinner Rolls", desc: "", price: 9 },
+      { id: "r2", name: "8 Pack Garlic Bread Sticks", desc: "", price: 10 },
+      { id: "r3", name: "8 Pack Hamburger Buns", desc: "", price: 12 }
     ]},
     { name: "Sweets & Treats", items: [
-      { id: "t1", name: "Cinnamon Rolls (4 pack)",      desc: "", price: 14 },
-      { id: "t2", name: "Chocolate Chip Cookies (6)",   desc: "", price: 9 },
-      { id: "t3", name: "Brownies (4 pack)",            desc: "", price: 10 }
+      { id: "t1", name: "Single Serve Jumbo 10 oz Buttermilk Sourdough Cinnamon Roll", desc: "", price: 4 },
+      { id: "t2", name: "Single Serve Jumbo Choco Chip Cookie", desc: "", price: 4 },
+      { id: "t3", name: "1 Lb Banana Bread Loaf", desc: "", price: 9 },
+      { id: "t4", name: "1/2 Dozen Gourmet Choco Chip Cookies", desc: "", price: 15 },
+      { id: "t5", name: "9 Pack Buttermilk Sourdough Cinnamon Rolls", desc: "", price: 18 }
     ]},
-    { name: "Specials & Gift Baskets", items: [
-      { id: "g1", name: "Seasonal Special",         desc: "Ask me what's in the oven!", price: 12 },
-      { id: "g2", name: "Small Gift Basket",        desc: "Loaf, jam and butter.", price: 30 },
-      { id: "g3", name: "Large Gift Basket",        desc: "Loaf, rolls, treats and extras.", price: 50 }
+    { name: "Holiday Bundles", items: [
+      { id: "h1", name: "Comfort & Joy", desc: "", price: 16 },
+      { id: "h2", name: "The Warm Starter Set", desc: "", price: 18 },
+      { id: "h3", name: "Cozy Home Bundle", desc: "", price: 24 },
+      { id: "h4", name: "Bakehouse Breakfast Bundle", desc: "", price: 35 },
+      { id: "h5", name: "Get Started Bundle", desc: "", price: 49 },
+      { id: "h6", name: "The Ultimate Starter Bundle", desc: "", price: 68 }
     ]}
   ]
 };
@@ -143,7 +197,7 @@ const $ = (id) => document.getElementById(id);
 const money = (n) => CONFIG.currency + n.toFixed(2);
 const DEMO = CONFIG.scriptUrl.startsWith("PASTE_");
 
-const state = { pickup: null, qty: {}, status: { capacity: {}, used: {}, pickupDate: "" }, refs: {} };
+const state = { pickup: null, payment: null, qty: {}, status: { capacity: {}, used: {}, pickupDate: "" }, refs: {} };
 
 function h(tag, props, ...kids) {
   const e = document.createElement(tag);
@@ -159,8 +213,8 @@ function h(tag, props, ...kids) {
 async function loadStatus() {
   if (DEMO) {
     // Demo numbers so you can preview the sold-out behaviour before connecting the sheet.
-    state.status = { capacity: { "Traditional Sourdough Boule": 6, "Sourdough Sandwich Bread Loaves": 6, "Rolls, Buns & More": 12 },
-                     used: { "Traditional Sourdough Boule": 4, "Rolls, Buns & More": 12 }, pickupDate: "" };
+    state.status = { capacity: { "Traditional Sourdough Boules": 6, "Everyday Sourdough Sandwich Loaves": 4, "Rolls, Buns & Other": 6 },
+                     used: { "Traditional Sourdough Boules": 4, "Rolls, Buns & Other": 6 }, pickupDate: "" };
     return;
   }
   try {
@@ -178,7 +232,23 @@ function build() {
     const label = h("label", {}, input, o.label, h("small", {}, o.note));
     input.addEventListener("change", () => { state.pickup = o; update(); });
     pk.append(label);
-    o.el = label;
+    o.el = label; o.input = input;
+  });
+
+  const pay = $("payments");
+  CONFIG.paymentOptions.forEach(name => {
+    const input = h("input", { type: "radio", name: "payment", value: name });
+    const label = h("label", {}, input, name);
+    input.addEventListener("change", () => {
+      state.payment = name;
+      [...pay.children].forEach(l => l.classList.toggle("on", l === label));
+    });
+    pay.append(label);
+  });
+
+  $("f-gift").addEventListener("change", () => {
+    $("giftFields").classList.toggle("hidden", !$("f-gift").checked);
+    update();
   });
 
   const cats = $("cats");
@@ -217,12 +287,27 @@ function catLimit(cat) {
 }
 
 function update() {
+  const st = state.status, closed = !!st.wedClosed;
+  CONFIG.pickupOptions.forEach(o => {
+    if (!o.limited) return;
+    o.input.disabled = closed;
+    o.el.style.opacity = closed ? ".5" : "";
+    o.el.style.cursor = closed ? "not-allowed" : "";
+    if (closed && state.pickup === o) { state.pickup = null; o.input.checked = false; }
+  });
   CONFIG.pickupOptions.forEach(o => o.el.classList.toggle("on", state.pickup === o));
-  $("pickupHint").textContent = state.pickup ? "" : "Choose a pickup option to start adding items.";
-  if (state.pickup && state.pickup.limited && state.status.pickupDate)
-    $("pickupHint").textContent = "Wednesday pickup for " + state.status.pickupDate + ".";
 
-  let total = 0;
+  const msgs = [st.notice, st.weekNote].filter(Boolean);
+  const nb = $("notice"); nb.textContent = "";
+  msgs.forEach(m => nb.append(h("div", {}, m)));
+  nb.classList.toggle("hidden", !msgs.length);
+
+  let hint = state.pickup ? "" : "Choose a pickup option to start adding items.";
+  if (state.pickup && state.pickup.limited && st.pickupDate) hint = "Wednesday pickup for " + st.pickupDate + ".";
+  if (state.pickup && !state.pickup.limited) hint = "Custom requests aren't guaranteed. I'll review yours and reach out to confirm before anything is final.";
+  $("pickupHint").textContent = hint;
+
+  let total = 0, count = 0;
   CONFIG.categories.forEach(cat => {
     const r = state.refs[cat.name];
     const rem = catLimit(cat);
@@ -245,10 +330,12 @@ function update() {
       r.rows[it.id].val.textContent = q;
       r.rows[it.id].minus.disabled = q === 0;
       r.rows[it.id].plus.disabled = !state.pickup || sel >= rem;
-      total += q * it.price;
+      total += q * it.price; count += q;
     });
   });
-  $("total").textContent = money(total);
+  const fee = $("f-gift").checked ? count * CONFIG.giftFee : 0;
+  $("total").textContent = money(total + fee);
+  $("totalNote").textContent = fee ? "Includes " + money(fee) + " gift packaging" : "Order total";
 }
 
 function showErr(t) { const e = $("err"); e.textContent = t; e.classList.remove("hidden"); e.scrollIntoView({ behavior: "smooth", block: "center" }); }
@@ -267,12 +354,18 @@ async function submit() {
   const phone = $("f-phone").value.trim();
   if (phone.replace(/\D/g, "").length < 10) return showErr("Please enter a phone number with area code so I can reach you.");
 
+  if (!state.payment) return showErr("Please choose a payment method.");
+  if (state.pickup.id === "Other" && !$("f-notes").value.trim()) return showErr("For a custom pickup, please add your preferred date and time in the Special Notes section.");
+
+  const gift = $("f-gift").checked;
+  const giftFee = gift ? lines.reduce((s, l) => s + l.qty, 0) * CONFIG.giftFee : 0;
   const btn = $("submit"); btn.disabled = true; btn.textContent = "Sending…";
   const payload = { name, email, phone, notes: $("f-notes").value.trim(),
-                    pickup: state.pickup.id, items: lines };
+                    pickup: state.pickup.id, pickupDate: state.status.pickupDate || "", payment: state.payment,
+                    gift, giftMessage: gift ? $("f-giftmsg").value.trim() : "", items: lines };
   try {
     let res;
-    if (DEMO) res = { ok: true, orderId: "DEMO", total: lines.reduce((s, l) => s + l.qty * l.price, 0), pickupDate: "" };
+    if (DEMO) res = { ok: true, orderId: "DEMO", total: lines.reduce((s, l) => s + l.qty * l.price, 0) + giftFee, giftFee, pickupDate: "" };
     else {
       // text/plain avoids a CORS preflight, which Apps Script can't answer
       const r = await fetch(CONFIG.scriptUrl, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) });
@@ -294,13 +387,18 @@ async function submit() {
 function finish(p, res) {
   $("form").classList.add("hidden"); $("bar").classList.add("hidden");
   const d = $("done"); d.classList.remove("hidden"); d.textContent = "";
+  const oid = res.orderId ? " (#" + res.orderId + ")" : "";
+  const row = (a, b, style) => h("div", style ? { style } : {}, h("span", {}, a), h("span", {}, b));
   d.append(h("h2", {}, "Thank you, " + p.name.split(" ")[0] + "!"),
-    h("div", {}, "Your order is in" + (res.orderId ? " (#" + res.orderId + ")" : "") + ". I'll be in touch to confirm."),
+    h("div", {}, p.pickup === "Other"
+      ? "Your custom pickup request is in" + oid + ". It isn't confirmed yet. I'll review it and reach out to you, and I'll do my best to make it work!"
+      : "Your order is in" + oid + ". You'll get a message (WhatsApp or email) with payment details. Your order is officially locked in once payment is received."),
     h("div", { class: "sum" },
-      p.items.map(l => h("div", {}, h("span", {}, l.qty + " × " + l.item), h("span", {}, money(l.qty * l.price)))),
-      h("div", { style: "border-top:1px solid var(--line);margin-top:6px;padding-top:6px;font-weight:700" },
-        h("span", {}, "Total"), h("span", {}, money(res.total))),
-      h("div", { style: "color:var(--muted);margin-top:6px" }, h("span", {}, "Pickup"), h("span", {}, p.pickup + (res.pickupDate && p.pickup === "Wednesday" ? " (" + res.pickupDate + ")" : "")))));
+      p.items.map(l => row(l.qty + " × " + l.item, money(l.qty * l.price))),
+      res.giftFee ? row("Gift packaging", money(res.giftFee)) : "",
+      row("Total", money(res.total), "border-top:1px solid var(--line);margin-top:6px;padding-top:6px;font-weight:700"),
+      row("Pickup", p.pickup === "Wednesday" ? "Wednesday" + (res.pickupDate ? " (" + res.pickupDate + ")" : "") : "Custom (see your notes)", "color:var(--muted);margin-top:6px"),
+      row("Payment", p.payment, "color:var(--muted)")));
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
