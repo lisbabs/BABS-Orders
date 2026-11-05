@@ -3,62 +3,66 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Order Fresh Sourdough</title>
+<title>Be A Blessing Sourdough | Order</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#f5f5f5; --card:#fffdf8; --ink:#3b2a1e; --muted:#7a6656; --accent:#b5651d;
-    --accent-dark:#8f4e14; --line:#e7dccb; --warn-bg:#fdf0e1; --warn-ink:#8a4b0f;
+    --bg:#f5f5f5; --card:#ffffff; --ink:#333333; --muted:#6b6b6b; --accent:#8a6a33;
+    --accent-dark:#6d5226; --line:#e2e2e2; --warn-bg:#f4eee3; --warn-ink:#6d5226;
   }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--ink);font-family:Georgia,"Times New Roman",serif;line-height:1.5}
+  button,input,textarea{font-family:inherit}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:"Montserrat",system-ui,sans-serif;line-height:1.5}
   .wrap{max-width:720px;margin:0 auto;padding:24px 16px 120px}
-  h1{font-size:2rem;margin:0 0 4px;text-align:center}
-  .sub{text-align:center;color:var(--muted);margin:0 0 24px;font-family:system-ui,sans-serif;font-size:.95rem}
+  .banner{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);margin:0 0 20px}
+  .req{color:#b3261e}
+  .sub{text-align:center;color:var(--muted);margin:0 0 24px;font-size:.95rem}
   h2{font-size:1.25rem;margin:0}
   .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:18px}
-  .step{font-family:system-ui,sans-serif;font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:6px}
-  .pickups{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;font-family:system-ui,sans-serif}
+  .step{font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:6px}
+  .pickups{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
   .pickups label{flex:1;min-width:150px;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;background:#fff}
   .pickups input{margin-right:8px;accent-color:var(--accent)}
   .pickups label.on{border-color:var(--accent);background:var(--warn-bg)}
   .pickups small{display:block;color:var(--muted);margin-left:24px}
-  .hint{font-family:system-ui,sans-serif;font-size:.85rem;color:var(--muted);margin-top:8px}
+  .hint{font-size:.85rem;color:var(--muted);margin-top:8px}
   .cat-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px}
-  .badge{font-family:system-ui,sans-serif;font-size:.78rem;background:var(--warn-bg);color:var(--warn-ink);padding:3px 10px;border-radius:99px;white-space:nowrap}
-  .full-msg{background:var(--warn-bg);color:var(--warn-ink);border-radius:10px;padding:12px 14px;margin:8px 0;font-family:system-ui,sans-serif;font-size:.92rem}
+  .badge{font-size:.78rem;background:var(--warn-bg);color:var(--warn-ink);padding:3px 10px;border-radius:99px;white-space:nowrap}
+  .full-msg{background:var(--warn-bg);color:var(--warn-ink);border-radius:10px;padding:12px 14px;margin:8px 0;font-size:.92rem}
   .item{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
   .item:first-of-type{border-top:0}
   .item .nm{font-weight:bold}
-  .item .ds{font-family:system-ui,sans-serif;font-size:.84rem;color:var(--muted)}
-  .item .pr{font-family:system-ui,sans-serif;font-size:.9rem;color:var(--accent-dark)}
-  .stepper{display:flex;align-items:center;gap:10px;font-family:system-ui,sans-serif}
+  .item .ds{font-size:.84rem;color:var(--muted)}
+  .item .pr{font-size:.9rem;color:var(--accent-dark)}
+  .stepper{display:flex;align-items:center;gap:10px}
   .stepper button{width:34px;height:34px;border-radius:50%;border:1.5px solid var(--accent);background:#fff;color:var(--accent);font-size:1.2rem;line-height:1;cursor:pointer}
   .stepper button:disabled{opacity:.3;cursor:not-allowed}
   .stepper span{min-width:20px;text-align:center;font-weight:600}
   .cat.locked .item{opacity:.45}
-  .fields{display:grid;gap:12px;margin-top:10px;font-family:system-ui,sans-serif}
+  .fields{display:grid;gap:12px;margin-top:10px}
   .fields label{display:block;font-size:.85rem;color:var(--muted)}
   .fields input,.fields textarea{width:100%;margin-top:4px;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;font:inherit;font-size:1rem;background:#fff;color:var(--ink)}
   .fields input:focus,.fields textarea:focus{outline:none;border-color:var(--accent)}
   .bar{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:12px 16px;box-shadow:0 -4px 16px rgba(0,0,0,.06)}
-  .bar-in{max-width:720px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;font-family:system-ui,sans-serif}
+  .bar-in{max-width:720px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px}
   .total{font-size:1.15rem;font-weight:700}
   .total small{display:block;font-weight:400;font-size:.78rem;color:var(--muted)}
   .go{background:var(--accent);color:#fff;border:0;border-radius:10px;padding:13px 22px;font-size:1rem;font-weight:600;cursor:pointer}
   .go:hover{background:var(--accent-dark)}
   .go:disabled{opacity:.5;cursor:not-allowed}
-  .err{background:#fde8e6;color:#8a1f12;border-radius:10px;padding:12px 14px;margin-top:12px;font-family:system-ui,sans-serif;font-size:.92rem}
+  .err{background:#fde8e6;color:#8a1f12;border-radius:10px;padding:12px 14px;margin-top:12px;font-size:.92rem}
   .done{text-align:center;padding:40px 10px}
   .done h2{font-size:1.6rem;margin-bottom:8px}
-  .sum{text-align:left;max-width:360px;margin:16px auto 0;font-family:system-ui,sans-serif;font-size:.95rem}
+  .sum{text-align:left;max-width:360px;margin:16px auto 0;font-size:.95rem}
   .sum div{display:flex;justify-content:space-between;padding:3px 0}
   .hidden{display:none!important}
 </style>
 </head>
 <body>
 <div class="wrap" id="app">
-  <h1 id="title"></h1>
-  <p class="sub" id="tagline"></p>
+  <img class="banner" src="banner.png" alt="Be A Blessing Sourdough: Where daily bread, wellness, &amp; faith come together">
   <div id="form">
     <div class="card">
       <div class="step">Step 1</div>
@@ -70,10 +74,11 @@
     <div class="card">
       <div class="step">Step 3</div>
       <h2>Your details</h2>
+      <div class="hint"><span class="req">*</span> Required, so I can reach you about your order.</div>
       <div class="fields">
-        <label>Name<input id="f-name" autocomplete="name"></label>
-        <label>Email<input id="f-email" type="email" autocomplete="email"></label>
-        <label>Phone (optional)<input id="f-phone" type="tel" autocomplete="tel"></label>
+        <label>Name <span class="req">*</span><input id="f-name" autocomplete="name" required></label>
+        <label>Email <span class="req">*</span><input id="f-email" type="email" autocomplete="email" required></label>
+        <label>Phone number <span class="req">*</span><input id="f-phone" type="tel" autocomplete="tel" required></label>
         <label>Notes (allergies, pickup time, etc.)<textarea id="f-notes" rows="3"></textarea></label>
       </div>
       <div class="err hidden" id="err"></div>
@@ -97,8 +102,7 @@
    ============================================================ */
 const CONFIG = {
   scriptUrl: "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE",
-  title: "Order Fresh Sourdough",
-  tagline: "Small-batch sourdough, baked in my home kitchen.",
+  title: "Be A Blessing Sourdough",
   currency: "$",
   pickupOptions: [
     { id: "Wednesday", label: "Wednesday", note: "Limited quantities each week", limited: true },
@@ -168,9 +172,6 @@ async function loadStatus() {
 }
 
 function build() {
-  $("title").textContent = CONFIG.title;
-  $("tagline").textContent = CONFIG.tagline;
-
   const pk = $("pickups");
   CONFIG.pickupOptions.forEach(o => {
     const input = h("input", { type: "radio", name: "pickup", value: o.id });
@@ -263,9 +264,11 @@ async function submit() {
   if (!lines.length) return showErr("Please add at least one item to your order.");
   if (!name) return showErr("Please enter your name.");
   if (!/^\S+@\S+\.\S+$/.test(email)) return showErr("Please enter a valid email so I can confirm your order.");
+  const phone = $("f-phone").value.trim();
+  if (phone.replace(/\D/g, "").length < 10) return showErr("Please enter a phone number with area code so I can reach you.");
 
   const btn = $("submit"); btn.disabled = true; btn.textContent = "Sending…";
-  const payload = { name, email, phone: $("f-phone").value.trim(), notes: $("f-notes").value.trim(),
+  const payload = { name, email, phone, notes: $("f-notes").value.trim(),
                     pickup: state.pickup.id, items: lines };
   try {
     let res;
