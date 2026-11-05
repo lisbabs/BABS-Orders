@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Order Fresh Sourdough</title>
+<style>
+  :root{
+    --bg:#faf5ec; --card:#fffdf8; --ink:#3b2a1e; --muted:#7a6656; --accent:#b5651d;
+    --accent-dark:#8f4e14; --line:#e7dccb; --warn-bg:#fdf0e1; --warn-ink:#8a4b0f;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:Georgia,"Times New Roman",serif;line-height:1.5}
+  .wrap{max-width:720px;margin:0 auto;padding:24px 16px 120px}
+  h1{font-size:2rem;margin:0 0 4px;text-align:center}
+  .sub{text-align:center;color:var(--muted);margin:0 0 24px;font-family:system-ui,sans-serif;font-size:.95rem}
+  h2{font-size:1.25rem;margin:0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:18px}
+  .step{font-family:system-ui,sans-serif;font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:6px}
+  .pickups{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;font-family:system-ui,sans-serif}
+  .pickups label{flex:1;min-width:150px;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;background:#fff}
+  .pickups input{margin-right:8px;accent-color:var(--accent)}
+  .pickups label.on{border-color:var(--accent);background:var(--warn-bg)}
+  .pickups small{display:block;color:var(--muted);margin-left:24px}
+  .hint{font-family:system-ui,sans-serif;font-size:.85rem;color:var(--muted);margin-top:8px}
+  .cat-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px}
+  .badge{font-family:system-ui,sans-serif;font-size:.78rem;background:var(--warn-bg);color:var(--warn-ink);padding:3px 10px;border-radius:99px;white-space:nowrap}
+  .full-msg{background:var(--warn-bg);color:var(--warn-ink);border-radius:10px;padding:12px 14px;margin:8px 0;font-family:system-ui,sans-serif;font-size:.92rem}
+  .item{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+  .item:first-of-type{border-top:0}
+  .item .nm{font-weight:bold}
+  .item .ds{font-family:system-ui,sans-serif;font-size:.84rem;color:var(--muted)}
+  .item .pr{font-family:system-ui,sans-serif;font-size:.9rem;color:var(--accent-dark)}
+  .stepper{display:flex;align-items:center;gap:10px;font-family:system-ui,sans-serif}
+  .stepper button{width:34px;height:34px;border-radius:50%;border:1.5px solid var(--accent);background:#fff;color:var(--accent);font-size:1.2rem;line-height:1;cursor:pointer}
+  .stepper button:disabled{opacity:.3;cursor:not-allowed}
+  .stepper span{min-width:20px;text-align:center;font-weight:600}
+  .cat.locked .item{opacity:.45}
+  .fields{display:grid;gap:12px;margin-top:10px;font-family:system-ui,sans-serif}
+  .fields label{display:block;font-size:.85rem;color:var(--muted)}
+  .fields input,.fields textarea{width:100%;margin-top:4px;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;font:inherit;font-size:1rem;background:#fff;color:var(--ink)}
+  .fields input:focus,.fields textarea:focus{outline:none;border-color:var(--accent)}
+  .bar{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:12px 16px;box-shadow:0 -4px 16px rgba(0,0,0,.06)}
+  .bar-in{max-width:720px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;font-family:system-ui,sans-serif}
+  .total{font-size:1.15rem;font-weight:700}
+  .total small{display:block;font-weight:400;font-size:.78rem;color:var(--muted)}
+  .go{background:var(--accent);color:#fff;border:0;border-radius:10px;padding:13px 22px;font-size:1rem;font-weight:600;cursor:pointer}
+  .go:hover{background:var(--accent-dark)}
+  .go:disabled{opacity:.5;cursor:not-allowed}
+  .err{background:#fde8e6;color:#8a1f12;border-radius:10px;padding:12px 14px;margin-top:12px;font-family:system-ui,sans-serif;font-size:.92rem}
+  .done{text-align:center;padding:40px 10px}
+  .done h2{font-size:1.6rem;margin-bottom:8px}
+  .sum{text-align:left;max-width:360px;margin:16px auto 0;font-family:system-ui,sans-serif;font-size:.95rem}
+  .sum div{display:flex;justify-content:space-between;padding:3px 0}
+  .hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+  <h1 id="title"></h1>
+  <p class="sub" id="tagline"></p>
+  <div id="form">
+    <div class="card">
+      <div class="step">Step 1</div>
+      <h2>When would you like to pick up?</h2>
+      <div class="pickups" id="pickups"></div>
+      <div class="hint" id="pickupHint"></div>
+    </div>
+    <div id="cats"></div>
+    <div class="card">
+      <div class="step">Step 3</div>
+      <h2>Your details</h2>
+      <div class="fields">
+        <label>Name<input id="f-name" autocomplete="name"></label>
+        <label>Email<input id="f-email" type="email" autocomplete="email"></label>
+        <label>Phone (optional)<input id="f-phone" type="tel" autocomplete="tel"></label>
+        <label>Notes (allergies, pickup time, etc.)<textarea id="f-notes" rows="3"></textarea></label>
+      </div>
+      <div class="err hidden" id="err"></div>
+    </div>
+  </div>
+  <div class="card done hidden" id="done"></div>
+</div>
+
+<div class="bar" id="bar">
+  <div class="bar-in">
+    <div class="total"><small>Order total</small><span id="total">$0.00</span></div>
+    <button class="go" id="submit">Place order</button>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   EDIT THIS SECTION: your business name, items and prices.
+   Capacity limits live in Code.gs (the Google Apps Script),
+   so the category names below MUST match the names there.
+   ============================================================ */
+const CONFIG = {
+  scriptUrl: "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE",
+  title: "Order Fresh Sourdough",
+  tagline: "Small-batch sourdough, baked in my home kitchen.",
+  currency: "$",
+  pickupOptions: [
+    { id: "Wednesday", label: "Wednesday", note: "Limited quantities each week", limited: true },
+    { id: "Other",     label: "Other",     note: "Arrange a different day with me", limited: false }
+  ],
+  fullMessage: "Thank you so much for the love! We have officially hit our maximum baking capacity for this item. Check back next week, or keep an eye on our WhatsApp community for any extra pop-up loaves!",
+  categories: [
+    { name: "Traditional Sourdough Boule", items: [
+      { id: "b1", name: "Classic Country Boule",   desc: "Crusty, tangy, timeless.", price: 9 },
+      { id: "b2", name: "Rosemary Garlic Boule",   desc: "Fresh herbs and roasted garlic.", price: 11 },
+      { id: "b3", name: "Jalapeño Cheddar Boule",  desc: "A little heat, a lot of cheese.", price: 12 }
+    ]},
+    { name: "Sourdough Sandwich Bread Loaves", items: [
+      { id: "s1", name: "Classic Sandwich Loaf",   desc: "Soft crumb, perfect for toast.", price: 9 },
+      { id: "s2", name: "Honey Wheat Sandwich Loaf", desc: "", price: 10 },
+      { id: "s3", name: "Cinnamon Swirl Loaf",     desc: "", price: 12 }
+    ]},
+    { name: "Rolls, Buns & More", items: [
+      { id: "r1", name: "Dinner Rolls (half dozen)", desc: "", price: 8 },
+      { id: "r2", name: "Burger Buns (4 pack)",      desc: "", price: 9 },
+      { id: "r3", name: "Soft Pretzels (4 pack)",    desc: "", price: 10 }
+    ]},
+    { name: "Sweets & Treats", items: [
+      { id: "t1", name: "Cinnamon Rolls (4 pack)",      desc: "", price: 14 },
+      { id: "t2", name: "Chocolate Chip Cookies (6)",   desc: "", price: 9 },
+      { id: "t3", name: "Brownies (4 pack)",            desc: "", price: 10 }
+    ]},
+    { name: "Specials & Gift Baskets", items: [
+      { id: "g1", name: "Seasonal Special",         desc: "Ask me what's in the oven!", price: 12 },
+      { id: "g2", name: "Small Gift Basket",        desc: "Loaf, jam and butter.", price: 30 },
+      { id: "g3", name: "Large Gift Basket",        desc: "Loaf, rolls, treats and extras.", price: 50 }
+    ]}
+  ]
+};
+/* ============================================================ */
+
+const $ = (id) => document.getElementById(id);
+const money = (n) => CONFIG.currency + n.toFixed(2);
+const DEMO = CONFIG.scriptUrl.startsWith("PASTE_");
+
+const state = { pickup: null, qty: {}, status: { capacity: {}, used: {}, pickupDate: "" }, refs: {} };
+
+function h(tag, props, ...kids) {
+  const e = document.createElement(tag);
+  for (const k in (props || {})) {
+    if (k === "class") e.className = props[k];
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), props[k]);
+    else e.setAttribute(k, props[k]);
+  }
+  kids.flat().forEach(c => e.append(c));
+  return e;
+}
+
+async function loadStatus() {
+  if (DEMO) {
+    // Demo numbers so you can preview the sold-out behaviour before connecting the sheet.
+    state.status = { capacity: { "Traditional Sourdough Boule": 6, "Sourdough Sandwich Bread Loaves": 6, "Rolls, Buns & More": 12 },
+                     used: { "Traditional Sourdough Boule": 4, "Rolls, Buns & More": 12 }, pickupDate: "" };
+    return;
+  }
+  try {
+    const r = await fetch(CONFIG.scriptUrl);
+    state.status = await r.json();
+  } catch (e) {
+    showErr("Couldn't check availability right now. Please refresh the page.");
+  }
+}
+
+function build() {
+  $("title").textContent = CONFIG.title;
+  $("tagline").textContent = CONFIG.tagline;
+
+  const pk = $("pickups");
+  CONFIG.pickupOptions.forEach(o => {
+    const input = h("input", { type: "radio", name: "pickup", value: o.id });
+    const label = h("label", {}, input, o.label, h("small", {}, o.note));
+    input.addEventListener("change", () => { state.pickup = o; update(); });
+    pk.append(label);
+    o.el = label;
+  });
+
+  const cats = $("cats");
+  CONFIG.categories.forEach((cat, ci) => {
+    const badge = h("span", { class: "badge hidden" });
+    const msg = h("div", { class: "full-msg hidden" }, CONFIG.fullMessage);
+    const box = h("div", { class: "card cat" },
+      h("div", { class: "step" }, ci === 0 ? "Step 2" : ""),
+      h("div", { class: "cat-head" }, h("h2", {}, cat.name), badge), msg);
+    const rows = {};
+    cat.items.forEach(it => {
+      state.qty[it.id] = 0;
+      const val = h("span", {}, "0");
+      const minus = h("button", { type: "button", "aria-label": "Remove one " + it.name }, "−");
+      const plus = h("button", { type: "button", "aria-label": "Add one " + it.name }, "+");
+      minus.addEventListener("click", () => { state.qty[it.id]--; update(); });
+      plus.addEventListener("click", () => { state.qty[it.id]++; update(); });
+      box.append(h("div", { class: "item" },
+        h("div", {}, h("div", { class: "nm" }, it.name),
+          it.desc ? h("div", { class: "ds" }, it.desc) : "",
+          h("div", { class: "pr" }, money(it.price))),
+        h("div", { class: "stepper" }, minus, val, plus)));
+      rows[it.id] = { val, minus, plus };
+    });
+    cats.append(box);
+    state.refs[cat.name] = { box, badge, msg, rows };
+  });
+}
+
+function catLimit(cat) {
+  // Returns remaining capacity for this category, or Infinity when unlimited.
+  if (!state.pickup || !state.pickup.limited) return Infinity;
+  const cap = state.status.capacity[cat.name];
+  if (cap === undefined || cap === null) return Infinity;
+  return Math.max(0, cap - (state.status.used[cat.name] || 0));
+}
+
+function update() {
+  CONFIG.pickupOptions.forEach(o => o.el.classList.toggle("on", state.pickup === o));
+  $("pickupHint").textContent = state.pickup ? "" : "Choose a pickup option to start adding items.";
+  if (state.pickup && state.pickup.limited && state.status.pickupDate)
+    $("pickupHint").textContent = "Wednesday pickup for " + state.status.pickupDate + ".";
+
+  let total = 0;
+  CONFIG.categories.forEach(cat => {
+    const r = state.refs[cat.name];
+    const rem = catLimit(cat);
+    // clamp if the person switched to a limited pickup after picking items
+    let sel = cat.items.reduce((s, it) => s + state.qty[it.id], 0);
+    for (let i = cat.items.length - 1; sel > rem && i >= 0; i--) {
+      const it = cat.items[i], cut = Math.min(state.qty[it.id], sel - rem);
+      state.qty[it.id] -= cut; sel -= cut;
+    }
+    const full = state.pickup && rem === 0;
+    r.msg.classList.toggle("hidden", !full);
+    r.box.classList.toggle("locked", !state.pickup || full);
+    if (state.pickup && state.pickup.limited && rem !== Infinity && rem > 0) {
+      r.badge.textContent = rem + " left";
+      r.badge.classList.remove("hidden");
+    } else r.badge.classList.add("hidden");
+
+    cat.items.forEach(it => {
+      const q = state.qty[it.id];
+      r.rows[it.id].val.textContent = q;
+      r.rows[it.id].minus.disabled = q === 0;
+      r.rows[it.id].plus.disabled = !state.pickup || sel >= rem;
+      total += q * it.price;
+    });
+  });
+  $("total").textContent = money(total);
+}
+
+function showErr(t) { const e = $("err"); e.textContent = t; e.classList.remove("hidden"); e.scrollIntoView({ behavior: "smooth", block: "center" }); }
+
+async function submit() {
+  $("err").classList.add("hidden");
+  const name = $("f-name").value.trim(), email = $("f-email").value.trim();
+  const lines = [];
+  CONFIG.categories.forEach(cat => cat.items.forEach(it => {
+    if (state.qty[it.id] > 0) lines.push({ category: cat.name, item: it.name, qty: state.qty[it.id], price: it.price });
+  }));
+  if (!state.pickup) return showErr("Please choose a pickup option.");
+  if (!lines.length) return showErr("Please add at least one item to your order.");
+  if (!name) return showErr("Please enter your name.");
+  if (!/^\S+@\S+\.\S+$/.test(email)) return showErr("Please enter a valid email so I can confirm your order.");
+
+  const btn = $("submit"); btn.disabled = true; btn.textContent = "Sending…";
+  const payload = { name, email, phone: $("f-phone").value.trim(), notes: $("f-notes").value.trim(),
+                    pickup: state.pickup.id, items: lines };
+  try {
+    let res;
+    if (DEMO) res = { ok: true, orderId: "DEMO", total: lines.reduce((s, l) => s + l.qty * l.price, 0), pickupDate: "" };
+    else {
+      // text/plain avoids a CORS preflight, which Apps Script can't answer
+      const r = await fetch(CONFIG.scriptUrl, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) });
+      res = await r.json();
+    }
+    if (!res.ok) {
+      if (res.status) state.status = res.status;
+      update();
+      showErr(res.error || "Something went wrong. Please try again.");
+      btn.disabled = false; btn.textContent = "Place order"; return;
+    }
+    finish(payload, res);
+  } catch (e) {
+    showErr("Couldn't send your order. Please check your connection and try again.");
+    btn.disabled = false; btn.textContent = "Place order";
+  }
+}
+
+function finish(p, res) {
+  $("form").classList.add("hidden"); $("bar").classList.add("hidden");
+  const d = $("done"); d.classList.remove("hidden"); d.textContent = "";
+  d.append(h("h2", {}, "Thank you, " + p.name.split(" ")[0] + "!"),
+    h("div", {}, "Your order is in" + (res.orderId ? " (#" + res.orderId + ")" : "") + ". I'll be in touch to confirm."),
+    h("div", { class: "sum" },
+      p.items.map(l => h("div", {}, h("span", {}, l.qty + " × " + l.item), h("span", {}, money(l.qty * l.price)))),
+      h("div", { style: "border-top:1px solid var(--line);margin-top:6px;padding-top:6px;font-weight:700" },
+        h("span", {}, "Total"), h("span", {}, money(res.total))),
+      h("div", { style: "color:var(--muted);margin-top:6px" }, h("span", {}, "Pickup"), h("span", {}, p.pickup + (res.pickupDate && p.pickup === "Wednesday" ? " (" + res.pickupDate + ")" : "")))));
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+build();
+update();
+loadStatus().then(update);
+$("submit").addEventListener("click", submit);
+</script>
+</body>
+</html>
