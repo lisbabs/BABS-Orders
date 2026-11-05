@@ -148,6 +148,7 @@
   </div>
 </div>
 
+<script src="config.js"></script>
 <script>
 /* ============================================================
    EDIT THIS SECTION: your business name, items and prices.
@@ -155,7 +156,7 @@
    so the category names below MUST match the names there.
    ============================================================ */
 const CONFIG = {
-  scriptUrl: "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE",
+  scriptUrl: window.BABS_SCRIPT_URL || "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE", // set in config.js
   title: "Be A Blessing Sourdough",
   currency: "$",
   giftFee: 1.5, // per item, when "Giving this as a gift" is checked
@@ -241,10 +242,11 @@ function build() {
   const pk = $("pickups");
   CONFIG.pickupOptions.forEach(o => {
     const input = h("input", { type: "radio", name: "pickup", value: o.id });
-    const label = h("label", {}, input, o.label, h("small", {}, o.note));
+    const small = h("small", {}, o.note);
+    const label = h("label", {}, input, o.label, small);
     input.addEventListener("change", () => { state.pickup = o; update(); });
     pk.append(label);
-    o.el = label; o.input = input;
+    o.el = label; o.input = input; o.small = small;
   });
 
   const pay = $("payments");
@@ -323,10 +325,17 @@ function catLimit(cat) {
   return Math.max(0, cap - (state.status.used[cat.name] || 0));
 }
 
+function fmtDate(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || "");
+  if (!m) return iso || "";
+  return new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 function update() {
   const st = state.status, closed = !!st.wedClosed;
   CONFIG.pickupOptions.forEach(o => {
     if (!o.limited) return;
+    o.small.textContent = (st.pickupDate ? fmtDate(st.pickupDate) + " · " : "") + o.note;
     o.input.disabled = closed;
     o.el.style.opacity = closed ? ".5" : "";
     o.el.style.cursor = closed ? "not-allowed" : "";
@@ -340,7 +349,7 @@ function update() {
   nb.classList.toggle("hidden", !msgs.length);
 
   let hint = state.pickup ? "" : "Choose a pickup option to start adding items.";
-  if (state.pickup && state.pickup.limited && st.pickupDate) hint = "Wednesday pickup for " + st.pickupDate + ".";
+  if (state.pickup && state.pickup.limited && st.pickupDate) hint = "Wednesday pickup: " + fmtDate(st.pickupDate) + ".";
   if (state.pickup && !state.pickup.limited) hint = "Custom requests aren't guaranteed. I'll review yours and reach out to confirm before anything is final.";
   $("pickupHint").textContent = hint;
 
@@ -437,7 +446,7 @@ function finish(p, res) {
       p.items.map(l => row(l.qty + " × " + l.item, money(l.qty * l.price))),
       res.giftFee ? row("Gift packaging × " + p.items.reduce((s, l) => s + (l.giftQty || 0), 0), money(res.giftFee)) : "",
       row("Total", money(res.total), "border-top:1px solid var(--line);margin-top:6px;padding-top:6px;font-weight:700"),
-      row("Pickup", p.pickup === "Wednesday" ? "Wednesday" + (res.pickupDate ? " (" + res.pickupDate + ")" : "") : "Custom (see your notes)", "color:var(--muted);margin-top:6px"),
+      row("Pickup", p.pickup === "Wednesday" ? "Wednesday" + (res.pickupDate ? " (" + fmtDate(res.pickupDate) + ")" : "") : "Custom (see your notes)", "color:var(--muted);margin-top:6px"),
       row("Payment", p.payment, "color:var(--muted)")),
     h("div", { class: "actions" },
       h("a", { class: "btn", href: "https://babs.s.gy/order", target: "_top" }, "Place Another Order"),
