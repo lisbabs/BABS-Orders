@@ -9,8 +9,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#f5f5f5; --card:#ffffff; --ink:#333333; --muted:#6b6b6b; --accent:#8a6a33;
-    --accent-dark:#6d5226; --line:#e2e2e2; --warn-bg:#f4eee3; --warn-ink:#6d5226;
+    --bg:#f5f5f5; --card:#ffffff; --ink:#333333; --muted:#6b6b6b; --accent:#6b4f3a;
+    --accent-dark:#54402f; --line:#e2e2e2; --warn-bg:#f1ebe6; --warn-ink:#6b4f3a;
   }
   *{box-sizing:border-box}
   button,input,textarea{font-family:inherit}
@@ -55,8 +55,9 @@
   .err{background:#fde8e6;color:#8a1f12;border-radius:10px;padding:12px 14px;margin-top:12px;font-size:.92rem}
   .done{text-align:center;padding:40px 10px}
   .done h2{font-size:1.6rem;margin-bottom:8px}
-  .sum{text-align:left;max-width:360px;margin:16px auto 0;font-size:.95rem}
-  .sum div{display:flex;justify-content:space-between;padding:3px 0}
+  .sum{text-align:left;max-width:560px;margin:20px auto 0;font-size:.95rem}
+  .sum div{display:flex;justify-content:space-between;gap:24px;padding:4px 0}
+  .sum div span:last-child{text-align:right}
   .intro h2{font-size:1.15rem}
   .intro p{margin:10px 0}
   .intro ul{padding-left:20px;margin:10px 0}
@@ -66,6 +67,14 @@
   .check input{width:18px;height:18px;accent-color:var(--accent)}
   .notice{background:var(--warn-bg);border:1.5px solid var(--accent);color:var(--warn-ink);border-radius:14px;padding:14px 18px;margin-bottom:18px;font-weight:600;font-size:.95rem}
   .notice div+div{margin-top:8px}
+  .giftrow{display:flex;gap:10px;align-items:center;padding:7px 0;font-size:.92rem;cursor:pointer}
+  .giftrow input{width:18px;height:18px;accent-color:var(--accent);flex:none}
+  .linkbtn{background:none;border:0;color:var(--accent-dark);font-weight:600;cursor:pointer;padding:6px 0;text-decoration:underline;font-size:.88rem}
+  .actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:28px}
+  .btn{display:inline-block;background:var(--accent);color:#fff;text-decoration:none;font-weight:600;border-radius:10px;padding:13px 22px;border:1.5px solid var(--accent)}
+  .btn:hover{background:var(--accent-dark);border-color:var(--accent-dark)}
+  .btn.alt{background:#fff;color:var(--accent-dark)}
+  .btn.alt:hover{background:var(--warn-bg)}
   .hidden{display:none!important}
 </style>
 </head>
@@ -96,10 +105,13 @@
     <div class="card">
       <div class="step">Step 3 · Optional</div>
       <h2>Giving this as a gift?</h2>
-      <p class="hint">I will package it up beautifully for you! Just leave your To/From names or short message here. (+$1.50 per item)<br>Includes festive holiday twine or ribbon, a green sprig or seasonal accent, and a handwritten BABS gift tag.</p>
-      <label class="check"><input type="checkbox" id="f-gift"> Yes, this order is a gift</label>
-      <div class="fields hidden" id="giftFields">
-        <label>To / From names or short message<textarea id="f-giftmsg" rows="3"></textarea></label>
+      <p class="hint">I will package it up beautifully for you! Check the box below, choose which items are gifts, and leave your To/From names or short message. (+$1.50 per gift item)<br>Includes festive holiday twine or ribbon, a green sprig or seasonal accent, and a handwritten BABS gift tag.</p>
+      <label class="check"><input type="checkbox" id="f-gift"> Yes, I'm giving something as a gift</label>
+      <div class="hidden" id="giftFields">
+        <div class="hint" style="margin-top:14px"><strong>Which items are gifts?</strong> (+$1.50 each)</div>
+        <div id="giftList"></div>
+        <button type="button" class="linkbtn" id="giftAll">Select all</button>
+        <div class="fields"><label>To / From names or short message<textarea id="f-giftmsg" rows="3"></textarea></label></div>
       </div>
     </div>
     <div class="card">
@@ -143,7 +155,7 @@
    so the category names below MUST match the names there.
    ============================================================ */
 const CONFIG = {
-  scriptUrl: "https://script.google.com/macros/s/AKfycbxB8xjtjjb_7k395fLzQh2Y_erOpHqG2ZeT4mrzCKd_uI8jr9JUP2k37TfBTFigZ9GrnA/exec",
+  scriptUrl: "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE",
   title: "Be A Blessing Sourdough",
   currency: "$",
   giftFee: 1.5, // per item, when "Giving this as a gift" is checked
@@ -197,7 +209,7 @@ const $ = (id) => document.getElementById(id);
 const money = (n) => CONFIG.currency + n.toFixed(2);
 const DEMO = CONFIG.scriptUrl.startsWith("PASTE_");
 
-const state = { pickup: null, payment: null, qty: {}, status: { capacity: {}, used: {}, pickupDate: "" }, refs: {} };
+const state = { pickup: null, payment: null, giftSel: new Set(), giftSig: null, qty: {}, status: { capacity: {}, used: {}, pickupDate: "" }, refs: {} };
 
 function h(tag, props, ...kids) {
   const e = document.createElement(tag);
@@ -246,6 +258,10 @@ function build() {
     pay.append(label);
   });
 
+  $("giftAll").addEventListener("click", () => {
+    CONFIG.categories.forEach(cat => cat.items.forEach(it => { for (let n = 1; n <= state.qty[it.id]; n++) state.giftSel.add(it.id + "#" + n); }));
+    state.giftSig = null; update();
+  });
   $("f-gift").addEventListener("change", () => {
     $("giftFields").classList.toggle("hidden", !$("f-gift").checked);
     update();
@@ -275,6 +291,27 @@ function build() {
     });
     cats.append(box);
     state.refs[cat.name] = { box, badge, msg, rows };
+  });
+}
+
+function renderGiftList() {
+  const units = [];
+  CONFIG.categories.forEach(cat => cat.items.forEach(it => {
+    const q = state.qty[it.id];
+    for (let n = 1; n <= q; n++) units.push({ key: it.id + "#" + n, label: it.name + (q > 1 ? " (" + n + " of " + q + ")" : "") });
+  }));
+  const keys = new Set(units.map(u => u.key));
+  [...state.giftSel].forEach(k => { if (!keys.has(k)) state.giftSel.delete(k); });
+  const sig = units.map(u => u.key).join("|");
+  if (sig === state.giftSig) return;
+  state.giftSig = sig;
+  const box = $("giftList"); box.textContent = "";
+  if (!units.length) { box.append(h("div", { class: "hint" }, "Add items above, then choose which ones are gifts.")); return; }
+  units.forEach(u => {
+    const cb = h("input", { type: "checkbox" });
+    cb.checked = state.giftSel.has(u.key);
+    cb.addEventListener("change", () => { if (cb.checked) state.giftSel.add(u.key); else state.giftSel.delete(u.key); update(); });
+    box.append(h("label", { class: "giftrow" }, cb, u.label));
   });
 }
 
@@ -333,7 +370,8 @@ function update() {
       total += q * it.price; count += q;
     });
   });
-  const fee = $("f-gift").checked ? count * CONFIG.giftFee : 0;
+  renderGiftList();
+  const fee = $("f-gift").checked ? state.giftSel.size * CONFIG.giftFee : 0;
   $("total").textContent = money(total + fee);
   $("totalNote").textContent = fee ? "Includes " + money(fee) + " gift packaging" : "Order total";
 }
@@ -345,7 +383,8 @@ async function submit() {
   const name = $("f-name").value.trim(), email = $("f-email").value.trim();
   const lines = [];
   CONFIG.categories.forEach(cat => cat.items.forEach(it => {
-    if (state.qty[it.id] > 0) lines.push({ category: cat.name, item: it.name, qty: state.qty[it.id], price: it.price });
+    if (state.qty[it.id] > 0) lines.push({ category: cat.name, item: it.name, qty: state.qty[it.id], price: it.price,
+      giftQty: $("f-gift").checked ? [...state.giftSel].filter(k => k.startsWith(it.id + "#")).length : 0 });
   }));
   if (!state.pickup) return showErr("Please choose a pickup option.");
   if (!lines.length) return showErr("Please add at least one item to your order.");
@@ -358,7 +397,8 @@ async function submit() {
   if (state.pickup.id === "Other" && !$("f-notes").value.trim()) return showErr("For a custom pickup, please add your preferred date and time in the Special Notes section.");
 
   const gift = $("f-gift").checked;
-  const giftFee = gift ? lines.reduce((s, l) => s + l.qty, 0) * CONFIG.giftFee : 0;
+  if (gift && !state.giftSel.size) return showErr("Please choose which items are gifts, or uncheck the gift box.");
+  const giftFee = gift ? state.giftSel.size * CONFIG.giftFee : 0;
   const btn = $("submit"); btn.disabled = true; btn.textContent = "Sending…";
   const payload = { name, email, phone, notes: $("f-notes").value.trim(),
                     pickup: state.pickup.id, pickupDate: state.status.pickupDate || "", payment: state.payment,
@@ -395,10 +435,13 @@ function finish(p, res) {
       : "Your order is in" + oid + ". You'll get a message (WhatsApp or email) with payment details. Your order is officially locked in once payment is received."),
     h("div", { class: "sum" },
       p.items.map(l => row(l.qty + " × " + l.item, money(l.qty * l.price))),
-      res.giftFee ? row("Gift packaging", money(res.giftFee)) : "",
+      res.giftFee ? row("Gift packaging × " + p.items.reduce((s, l) => s + (l.giftQty || 0), 0), money(res.giftFee)) : "",
       row("Total", money(res.total), "border-top:1px solid var(--line);margin-top:6px;padding-top:6px;font-weight:700"),
       row("Pickup", p.pickup === "Wednesday" ? "Wednesday" + (res.pickupDate ? " (" + res.pickupDate + ")" : "") : "Custom (see your notes)", "color:var(--muted);margin-top:6px"),
-      row("Payment", p.payment, "color:var(--muted)")));
+      row("Payment", p.payment, "color:var(--muted)")),
+    h("div", { class: "actions" },
+      h("a", { class: "btn", href: "https://babs.s.gy/order", target: "_top" }, "Place Another Order"),
+      h("a", { class: "btn alt", href: "https://babs.s.gy/menu", target: "_blank", rel: "noopener" }, "See BABS Menu")));
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
