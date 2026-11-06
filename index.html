@@ -97,6 +97,7 @@
     </div>
     <div class="card">
       <div class="step">Step 1</div>
+      <div class="notice hidden" id="weekNote" style="margin-top:10px"></div>
       <h2>Preferred Pickup Date &amp; Time Slot <span class="req">*</span></h2>
       <div class="pickups" id="pickups"></div>
       <div class="hint" id="pickupHint"></div>
@@ -166,7 +167,7 @@ const CONFIG = {
   scriptUrl: window.BABS_SCRIPT_URL || "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE", // set in config.js
   title: "Be A Blessing Sourdough",
   currency: "$",
-  giftFee: 2.0, // per item, when "Giving this as a gift" is checked
+  giftFee: 2, // per item, when "Giving this as a gift" is checked
   pickupOptions: [
     { id: "Wednesday", label: "Standard Wednesday Porch Pickup", note: "3:00 PM – 6:00 PM in Deerwood · limited weekly quantities", limited: true },
     { id: "Other",     label: "Custom Pickup Day / Time",        note: "Request only, not guaranteed. Add your preferred date/time in the Special Notes section", limited: false }
@@ -250,10 +251,11 @@ function build() {
   CONFIG.pickupOptions.forEach(o => {
     const input = h("input", { type: "radio", name: "pickup", value: o.id });
     const small = h("small", {}, o.note);
-    const label = h("label", {}, input, o.label, small);
+    const text = h("span", {}, o.label);
+    const label = h("label", {}, input, text, small);
     input.addEventListener("change", () => { state.pickup = o; update(); });
     pk.append(label);
-    o.el = label; o.input = input; o.small = small;
+    o.el = label; o.input = input; o.small = small; o.text = text;
   });
 
   const pay = $("payments");
@@ -342,10 +344,17 @@ function fmtDate(iso) {
   return new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+function dayName(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || "");
+  if (!m) return "Wednesday";
+  return new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString("en-US", { weekday: "long" });
+}
+
 function update() {
   const st = state.status, closed = !!st.wedClosed;
   CONFIG.pickupOptions.forEach(o => {
     if (!o.limited) return;
+    o.text.textContent = "Standard " + dayName(st.pickupDate) + " Porch Pickup";
     o.small.textContent = (st.pickupDate ? fmtDate(st.pickupDate) + " · " : "") + o.note;
     o.input.disabled = closed;
     o.el.style.opacity = closed ? ".5" : "";
@@ -354,13 +363,14 @@ function update() {
   });
   CONFIG.pickupOptions.forEach(o => o.el.classList.toggle("on", state.pickup === o));
 
-  const msgs = [st.notice, st.weekNote].filter(Boolean);
   const nb = $("notice"); nb.textContent = "";
-  msgs.forEach(m => nb.append(h("div", {}, m)));
-  nb.classList.toggle("hidden", !msgs.length);
+  if (st.notice) nb.append(h("div", {}, st.notice));
+  nb.classList.toggle("hidden", !st.notice);
+  const wn = $("weekNote"); wn.textContent = st.weekNote || "";
+  wn.classList.toggle("hidden", !st.weekNote);
 
   let hint = state.pickup ? "" : "Choose a pickup option to start adding items.";
-  if (state.pickup && state.pickup.limited && st.pickupDate) hint = "Wednesday pickup: " + fmtDate(st.pickupDate) + ".";
+  if (state.pickup && state.pickup.limited && st.pickupDate) hint = dayName(st.pickupDate) + " pickup: " + fmtDate(st.pickupDate) + ".";
   if (state.pickup && !state.pickup.limited) hint = "Custom requests aren't guaranteed. I'll review yours and reach out to confirm before anything is final.";
   $("pickupHint").textContent = hint;
 
@@ -458,7 +468,7 @@ function finish(p, res) {
       p.items.map(l => row(l.qty + " × " + l.item, money(l.qty * l.price))),
       res.giftFee ? row("Gift packaging × " + p.items.reduce((s, l) => s + (l.giftQty || 0), 0), money(res.giftFee)) : "",
       row("Total", money(res.total), "border-top:1px solid var(--line);margin-top:6px;padding-top:6px;font-weight:700"),
-      row("Pickup", p.pickup === "Wednesday" ? "Wednesday" + (res.pickupDate ? " (" + fmtDate(res.pickupDate) + ")" : "") : "Custom (see your notes)", "color:var(--muted);margin-top:6px"),
+      row("Pickup", p.pickup === "Wednesday" ? dayName(res.pickupDate) + (res.pickupDate ? " (" + fmtDate(res.pickupDate) + ")" : "") : "Custom (see your notes)", "color:var(--muted);margin-top:6px"),
       row("Payment", p.payment, "color:var(--muted)")),
     h("div", { class: "actions" },
       h("a", { class: "btn", href: "https://babs.s.gy/order", target: "_top" }, "Place Another Order"),
