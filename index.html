@@ -123,6 +123,13 @@
         <label>Email <span class="req">*</span><input id="f-email" type="email" autocomplete="email" required></label>
         <label>Phone number <span class="req">*</span><input id="f-phone" type="tel" autocomplete="tel" required></label>
       </div>
+      <div style="margin-top:18px">
+        <div class="hint" style="margin-top:0"><strong>Check here to be added to our local WhatsApp group!</strong> Get priority access to weekly menu drops, first dibs on bake-day extras, and exclusive subscriber-only discounts. (Optional)</div>
+        <div class="pickups" id="whatsapp">
+          <label><input type="radio" name="whatsapp" value="Yes! Add me for early menu drops & extra bake alerts">Yes! Add me for early menu drops &amp; extra bake alerts</label>
+          <label><input type="radio" name="whatsapp" value="No thanks, just email/text me about this order">No thanks, just email/text me about this order</label>
+        </div>
+      </div>
     </div>
     <div class="card">
       <div class="step">Step 5</div>
@@ -259,6 +266,10 @@ function build() {
     });
     pay.append(label);
   });
+
+  document.querySelectorAll("#whatsapp input").forEach(inp => inp.addEventListener("change", () => {
+    document.querySelectorAll("#whatsapp label").forEach(l => l.classList.toggle("on", l.querySelector("input").checked));
+  }));
 
   $("giftAll").addEventListener("click", () => {
     CONFIG.categories.forEach(cat => cat.items.forEach(it => { for (let n = 1; n <= state.qty[it.id]; n++) state.giftSel.add(it.id + "#" + n); }));
@@ -411,6 +422,7 @@ async function submit() {
   const btn = $("submit"); btn.disabled = true; btn.textContent = "Sending…";
   const payload = { name, email, phone, notes: $("f-notes").value.trim(),
                     pickup: state.pickup.id, pickupDate: state.status.pickupDate || "", payment: state.payment,
+                    whatsapp: (document.querySelector("input[name=whatsapp]:checked") || {}).value || "",
                     gift, giftMessage: gift ? $("f-giftmsg").value.trim() : "", items: lines };
   try {
     let res;
