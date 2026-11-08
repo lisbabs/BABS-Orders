@@ -81,6 +81,7 @@
   .btn:hover{background:var(--accent-dark);border-color:var(--accent-dark)}
   .btn.alt{background:#fff;color:var(--accent-dark)}
   .btn.alt:hover{background:var(--warn-bg)}
+  .preview{pointer-events:none;user-select:none;opacity:.5;filter:grayscale(1)}
   .hidden{display:none!important}
   @media print{
     body{background:#fff}
@@ -106,10 +107,11 @@
       </ul>
       <p>🔗 <strong>Explore BABS Menu &amp; Story:</strong> Visit <a href="https://babs.s.gy/menu" target="_blank" rel="noopener">https://babs.s.gy/menu</a> to view our full menu options and details!</p>
     </div>
-    <div class="card">
+    <div class="card" id="step1">
       <div class="step">Step 1</div>
       <div class="notice hidden" id="weekNote" style="margin-top:10px"></div>
       <h2>Preferred Pickup Date &amp; Time Slot <span class="req">*</span></h2>
+      <div class="notice hidden" id="closedMsg" style="margin-top:10px"></div>
       <div class="pickups" id="pickups"></div>
       <div class="hint" id="pickupHint"></div>
     </div>
@@ -184,7 +186,7 @@ const CONFIG = {
   giftFee: 2, // per item, when "Giving this as a gift" is checked
   // These are only fallbacks. The day, time, location, payments, fee and links come from the Settings tab of the sheet.
   pickupOptions: [
-    { id: "Standard", label: "Porch Pickup", note: "limited weekly quantities", limited: true },
+    { id: "Standard", label: "Standard Porch Pickup", note: "limited weekly quantities", limited: true },
     { id: "Other",     label: "Custom Pickup Day / Time",        note: "Request only, not guaranteed. Add your preferred date/time in the Special Notes section", limited: false }
   ],
   paymentOptions: [
@@ -445,19 +447,25 @@ function update() {
 
   const nb = $("notice"); nb.textContent = "";
   if (st.notice) nb.append(h("div", {}, st.notice));
-  // Fully closed (Wednesday AND custom closed): show the message + WhatsApp invite at the top, hide the order steps.
+  nb.classList.toggle("hidden", !st.notice);
+  // Fully closed (standard AND custom closed): the whole page stays visible as a preview of the menu.
+  // Step 1 shows the closed message, the other steps are greyed out and can't be used, and there is no Place order button.
+  const cm = $("closedMsg"); cm.textContent = "";
   if (fullyClosed) {
-    nb.append(h("div", {}, st.weekNote || "Orders are closed this week."));
-    nb.append(h("div", {}, CONFIG.whatsappText + " ",
+    cm.append(h("div", {}, st.weekNote || "Orders are currently closed. Take a look at what I offer below, and check back soon!"));
+    cm.append(h("div", {}, CONFIG.whatsappText + " ",
       h("a", { href: cfg().whatsappUrl, target: "_blank", rel: "noopener", style: "color:var(--accent-dark);text-decoration:underline" }, CONFIG.whatsappLinkLabel)));
   }
-  nb.classList.toggle("hidden", !st.notice && !fullyClosed);
+  cm.classList.toggle("hidden", !fullyClosed);
   const wn = $("weekNote"); wn.textContent = st.weekNote || "";
   wn.classList.toggle("hidden", !st.weekNote || fullyClosed);
-  document.querySelectorAll("#form > .card:not(.intro), #cats").forEach(el => el.classList.toggle("hidden", fullyClosed));
+  document.querySelectorAll("#form > .card:not(.intro):not(#step1), #cats").forEach(el => {
+    el.classList.toggle("preview", fullyClosed);
+    if (fullyClosed) el.setAttribute("inert", ""); else el.removeAttribute("inert");
+  });
   $("bar").classList.toggle("hidden", fullyClosed);
 
-  let hint = state.pickup ? "" : "Choose a pickup option to start adding items.";
+  let hint = state.pickup || fullyClosed ? "" : "Choose a pickup option to start adding items.";
   if (state.pickup && state.pickup.limited && st.pickupDate) hint = dayName(st.pickupDate) + " pickup: " + fmtDate(st.pickupDate) + (st.pickupTime ? ", " + st.pickupTime : "") + ".";
   if (state.pickup && !state.pickup.limited) hint = "Custom requests aren't guaranteed. I'll review yours and reach out to confirm before anything is final.";
   $("pickupHint").textContent = hint;
@@ -506,6 +514,7 @@ function update() {
 function showErr(t) { const e = $("err"); e.textContent = t; e.classList.remove("hidden"); e.scrollIntoView({ behavior: "smooth", block: "center" }); }
 
 async function submit() {
+  if (state.status.wedClosed && state.status.customClosed) return; // preview mode: orders are closed
   $("err").classList.add("hidden");
   const name = $("f-name").value.trim(), email = $("f-email").value.trim();
   const lines = [];
