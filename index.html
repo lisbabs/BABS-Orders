@@ -137,6 +137,9 @@
       </div>
       <div style="margin-top:18px" id="waSection">
         <div class="hint" style="margin-top:0"><strong>Check here to be added to our local WhatsApp group!</strong> Get priority access to weekly menu drops, first dibs on bake-day extras, and exclusive subscriber-only discounts. (Optional)</div>
+        <div class="pickups hidden" id="waMember">
+          <label class="on" style="cursor:default"><input type="checkbox" checked disabled>You're in our local BABS WhatsApp group! Thanks for being part of the community 💛</label>
+        </div>
         <div class="pickups" id="whatsapp">
           <label><input type="radio" name="whatsapp" value="Yes! Add me for early menu drops & extra bake alerts">Yes! Add me for early menu drops &amp; extra bake alerts</label>
           <label><input type="radio" name="whatsapp" value="No thanks, just email/text me about this order">No thanks, just email/text me about this order</label>
@@ -523,7 +526,9 @@ async function checkOptIn() {
   }
   if (seq !== state.optSeq) return; // a newer check is already running
   state.optedIn = yes;
-  $("waSection").classList.toggle("hidden", yes);
+  // already in the group: swap the two choices for one checked "you're in" button (the question stays visible)
+  $("whatsapp").classList.toggle("hidden", yes);
+  $("waMember").classList.toggle("hidden", !yes);
 }
 $("f-email").addEventListener("change", checkOptIn);
 $("f-phone").addEventListener("change", checkOptIn);
