@@ -345,7 +345,8 @@ function catLimit(cat) {
 function itemLimit(it) {
   if (it.soldOut) return 0;
   if (it.left === null || it.left === undefined) return Infinity;
-  if (state.pickup && !state.pickup.limited) return Infinity; // custom requests are reviewed by hand
+  // weekly quantities only apply to Wednesday pickup; "Total" quantities (it.lifetime) apply to every pickup type
+  if (state.pickup && !state.pickup.limited && !it.lifetime) return Infinity;
   return it.left;
 }
 
