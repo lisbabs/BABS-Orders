@@ -190,6 +190,9 @@ const CONFIG = {
     "Venmo Business @BeABlessingSourdough",
     "Cash (Must arrange with Lis prior to pickup)"
   ],
+  whatsappUrl: "https://chat.whatsapp.com/JBdxEzMWYfi1cK7FYBnuV3?mode=gi_t",
+  whatsappText: "💛 Stay in the loop! Join my free WhatsApp community for exclusive updates and to be the first to know when orders reopen.",
+  whatsappLinkLabel: "Join the community here",
   venmoUrl: "https://www.venmo.com/u/beablessingsourdough",
   fullMessage: "Thank you so much for the love! We have officially hit our maximum baking capacity for this item. Check back next week, or keep an eye on our WhatsApp community for any extra pop-up loaves!"
 };
@@ -374,6 +377,15 @@ function dayName(iso) {
 function update() {
   renderMenu();
   const st = state.status, closed = !!st.wedClosed;
+  const customClosed = !!st.customClosed, fullyClosed = closed && customClosed;
+  CONFIG.pickupOptions.forEach(o => {
+    if (o.limited) return;
+    o.small.textContent = customClosed ? "Custom orders are not available this week." : o.note;
+    o.input.disabled = customClosed;
+    o.el.style.opacity = customClosed ? ".5" : "";
+    o.el.style.cursor = customClosed ? "not-allowed" : "";
+    if (customClosed && state.pickup === o) { state.pickup = null; o.input.checked = false; }
+  });
   CONFIG.pickupOptions.forEach(o => {
     if (!o.limited) return;
     o.text.textContent = "Standard " + dayName(st.pickupDate) + " Porch Pickup";
@@ -387,9 +399,17 @@ function update() {
 
   const nb = $("notice"); nb.textContent = "";
   if (st.notice) nb.append(h("div", {}, st.notice));
-  nb.classList.toggle("hidden", !st.notice);
+  // Fully closed (Wednesday AND custom closed): show the message + WhatsApp invite at the top, hide the order steps.
+  if (fullyClosed) {
+    nb.append(h("div", {}, st.weekNote || "Orders are closed this week."));
+    nb.append(h("div", {}, CONFIG.whatsappText + " ",
+      h("a", { href: CONFIG.whatsappUrl, target: "_blank", rel: "noopener", style: "color:var(--accent-dark);text-decoration:underline" }, CONFIG.whatsappLinkLabel)));
+  }
+  nb.classList.toggle("hidden", !st.notice && !fullyClosed);
   const wn = $("weekNote"); wn.textContent = st.weekNote || "";
-  wn.classList.toggle("hidden", !st.weekNote);
+  wn.classList.toggle("hidden", !st.weekNote || fullyClosed);
+  document.querySelectorAll("#form > .card:not(.intro), #cats").forEach(el => el.classList.toggle("hidden", fullyClosed));
+  $("bar").classList.toggle("hidden", fullyClosed);
 
   let hint = state.pickup ? "" : "Choose a pickup option to start adding items.";
   if (state.pickup && state.pickup.limited && st.pickupDate) hint = dayName(st.pickupDate) + " pickup: " + fmtDate(st.pickupDate) + ".";
