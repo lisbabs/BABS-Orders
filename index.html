@@ -99,10 +99,10 @@
       <p>Please fill out this form to reserve your fresh sourdough items or bundles.</p>
       <ul>
         <li><strong>Limited Weekly quantity:</strong> it's only me (Lis) in the kitchen so my quantities are limited. If an option isn't available, it means we've sold out of that category for the week. Check back next week or reach out to see if we can find another time that works!</li>
-        <li>⏰ <strong>Order Cutoff:</strong> All custom and Wednesday orders require at least <strong>48 hours advance notice</strong> (Orders close at 6:00 PM 2 days prior to weekly pickup day).</li>
+        <li id="introCutoff">⏰ <strong>Order Cutoff:</strong> All custom and Wednesday orders require at least <strong>48 hours advance notice</strong> (Orders close at 6:00 PM 2 days prior to weekly pickup day).</li>
         <li>🌾 <strong>Freshness Guarantee:</strong> All breads, cookies, and specialty items are long-fermented overnight and baked fresh the morning of your pickup!</li>
         <li>💳 <strong>Pre-Payment Required:</strong> After submitting, you will receive a direct message (WhatsApp or email) with Venmo payment details or cash arrangement instructions. Orders are officially locked in once payment is received. <a href="https://beablessingsourdough.com/menu#:~:text=ORDER%20NOW-,FAQS,-How%20Do%20I" target="_blank" rel="noopener">View return policy here.</a></li>
-        <li>📍 <strong>Pickup Location:</strong> Deerwood, MN (Exact porch pickup address provided upon order confirmation).</li>
+        <li id="introLocation">📍 <strong>Pickup Location:</strong> Deerwood, MN (Exact porch pickup address provided upon order confirmation).</li>
       </ul>
       <p>🔗 <strong>Explore BABS Menu &amp; Story:</strong> Visit <a href="https://babs.s.gy/menu" target="_blank" rel="noopener">https://babs.s.gy/menu</a> to view our full menu options and details!</p>
     </div>
@@ -117,10 +117,10 @@
     <div class="card">
       <div class="step">Step 3 · Optional</div>
       <h2>Giving this as a gift?</h2>
-      <p class="hint">I will package it up beautifully for you! Check the box below, choose which items are gifts, and leave your To/From names or short message. (+$2.00 per gift item)<br>Includes festive holiday twine or ribbon, a green sprig or seasonal accent, and a handwritten BABS gift tag.</p>
+      <p class="hint">I will package it up beautifully for you! Check the box below, choose which items are gifts, and leave your To/From names or short message. (+<span class="giftfee">$2.00</span> per gift item)<br>Includes festive holiday twine or ribbon, a green sprig or seasonal accent, and a handwritten BABS gift tag.</p>
       <label class="check"><input type="checkbox" id="f-gift"> Yes, I'm giving an item as a gift</label>
       <div class="hidden" id="giftFields">
-        <div class="hint" style="margin-top:14px"><strong>Which items are gifts?</strong> (+$2.00 each)</div>
+        <div class="hint" style="margin-top:14px"><strong>Which items are gifts?</strong> (+<span class="giftfee">$2.00</span> each)</div>
         <div id="giftList"></div>
         <button type="button" class="linkbtn" id="giftAll">Select all</button>
         <div class="fields"><label>To / From names or short message<textarea id="f-giftmsg" rows="3"></textarea></label></div>
@@ -154,7 +154,7 @@
     <div class="card">
       <div class="step">Step 6 · Optional</div>
       <h2>Special Notes Or Requests</h2>
-      <p class="hint"><strong>Can't make the Wednesday pickup window?</strong><br>Looking for a custom order/different drop day? Type your preferred date/time or specific request here! As I kick off BABS, I'm happy to accommodate custom orders whenever my kitchen schedule allows.</p>
+      <p class="hint"><strong>Can't make the <span class="pickday">Wednesday</span> pickup window?</strong><br>Looking for a custom order/different drop day? Type your preferred date/time or specific request here! As I kick off BABS, I'm happy to accommodate custom orders whenever my kitchen schedule allows.</p>
       <p class="hint"><strong>Special Requests</strong><br>Have any special requests, scoring preferences, or notes for your order? Let me know below and I'll do my absolute best to accommodate you!</p>
       <div class="fields"><label><textarea id="f-notes" rows="4"></textarea></label></div>
       <div class="err hidden" id="err"></div>
@@ -182,8 +182,9 @@ const CONFIG = {
   title: "Be A Blessing Sourdough",
   currency: "$",
   giftFee: 2, // per item, when "Giving this as a gift" is checked
+  // These are only fallbacks. The day, time, location, payments, fee and links come from the Settings tab of the sheet.
   pickupOptions: [
-    { id: "Wednesday", label: "Standard Wednesday Porch Pickup", note: "3:00 PM – 6:00 PM in Deerwood · limited weekly quantities", limited: true },
+    { id: "Standard", label: "Standard Porch Pickup", note: "limited weekly quantities", limited: true },
     { id: "Other",     label: "Custom Pickup Day / Time",        note: "Request only, not guaranteed. Add your preferred date/time in the Special Notes section", limited: false }
   ],
   paymentOptions: [
@@ -217,6 +218,17 @@ function h(tag, props, ...kids) {
 }
 
 const menuOf = () => state.status.menu || [];
+
+// Settings from the sheet (Settings tab, columns K-M) win; the values in CONFIG above are only fallbacks.
+const cfg = () => Object.assign({
+  pickupStyle: "Porch Pickup", location: "Deerwood, MN",
+  locationNote: "(Exact porch pickup address provided upon order confirmation)",
+  cutoffDays: 2, cutoffText: "6:00 PM",
+  giftFee: CONFIG.giftFee, payments: CONFIG.paymentOptions,
+  venmoUrl: CONFIG.venmoUrl, whatsappUrl: CONFIG.whatsappUrl, fullMessage: CONFIG.fullMessage
+}, state.status.config || {});
+
+function plural(n, word) { return n + " " + word + (n === 1 ? "" : "s"); }
 
 async function loadStatus() {
   if (DEMO) {
@@ -252,17 +264,6 @@ function build() {
     o.el = label; o.input = input; o.small = small; o.text = text;
   });
 
-  const pay = $("payments");
-  CONFIG.paymentOptions.forEach(name => {
-    const input = h("input", { type: "radio", name: "payment", value: name });
-    const label = h("label", {}, input, name);
-    input.addEventListener("change", () => {
-      state.payment = name;
-      [...pay.children].forEach(l => l.classList.toggle("on", l === label));
-    });
-    pay.append(label);
-  });
-
   document.querySelectorAll("#whatsapp input").forEach(inp => inp.addEventListener("change", () => {
     document.querySelectorAll("#whatsapp label").forEach(l => l.classList.toggle("on", l.querySelector("input").checked));
   }));
@@ -277,10 +278,31 @@ function build() {
   });
 }
 
+// Payment choices come from the sheet. Only rebuilds when the list changed; keeps the person's choice if it still exists.
+function renderPayments() {
+  const list = cfg().payments || [];
+  const sig = JSON.stringify(list);
+  if (sig === state.paySig) return;
+  state.paySig = sig;
+  if (state.payment && list.indexOf(state.payment) < 0) state.payment = null;
+  const pay = $("payments"); pay.textContent = "";
+  list.forEach(name => {
+    const input = h("input", { type: "radio", name: "payment", value: name });
+    input.checked = state.payment === name;
+    const label = h("label", {}, input, name);
+    if (input.checked) label.classList.add("on");
+    input.addEventListener("change", () => {
+      state.payment = name;
+      [...pay.children].forEach(l => l.classList.toggle("on", l === label));
+    });
+    pay.append(label);
+  });
+}
+
 // Builds the menu cards from the sheet. Only rebuilds when the menu itself changed.
 function renderMenu() {
   const menu = menuOf();
-  const sig = JSON.stringify(menu.map(c => [c.name, c.items.map(i => [i.id, i.name, i.desc, i.price])]));
+  const sig = JSON.stringify([cfg().fullMessage, menu.map(c => [c.name, c.items.map(i => [i.id, i.name, i.desc, i.price])])]);
   if (sig === state.menuSig) return;
   state.menuSig = sig;
 
@@ -296,7 +318,7 @@ function renderMenu() {
   }
   menu.forEach((cat, ci) => {
     const badge = h("span", { class: "badge hidden" });
-    const msg = h("div", { class: "full-msg hidden" }, CONFIG.fullMessage);
+    const msg = h("div", { class: "full-msg hidden" }, cfg().fullMessage);
     const box = h("div", { class: "card cat" },
       h("div", { class: "step" }, ci === 0 ? "Step 2" : ""),
       h("div", { class: "cat-head" }, h("h2", {}, cat.name), badge), msg);
@@ -370,12 +392,34 @@ function fmtDate(iso) {
 
 function dayName(iso) {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || "");
-  if (!m) return "Wednesday";
+  if (!m) return "Weekly";
   return new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString("en-US", { weekday: "long" });
+}
+
+// Page text that follows the pickup day, time, cutoff and location set in the sheet.
+function renderDynamicText() {
+  const st = state.status, c = cfg();
+  const day = st.pickupDate ? dayName(st.pickupDate) : "standard";
+  const loc = c.location + (c.locationNote ? " " + c.locationNote : "");
+  const n = Math.max(0, Math.floor(+c.cutoffDays || 0));
+  const li = $("introCutoff"); li.textContent = "";
+  if (n === 0) {
+    li.append("⏰ ", h("strong", {}, "Order Cutoff:"), " All custom and " + day + " orders close at " + c.cutoffText + " on the pickup day.");
+  } else {
+    li.append("⏰ ", h("strong", {}, "Order Cutoff:"), " All custom and " + day + " orders require at least ",
+      h("strong", {}, plural(n * 24, "hour") + " advance notice"),
+      " (Orders close at " + c.cutoffText + ", " + plural(n, "day") + " prior to weekly pickup day).");
+  }
+  const lo = $("introLocation"); lo.textContent = "";
+  lo.append("📍 ", h("strong", {}, "Pickup Location:"), " " + loc + (/[.!?)]$/.test(loc) ? "" : "."));
+  document.querySelectorAll(".pickday").forEach(e => { e.textContent = day === "standard" ? "weekly" : day; });
+  document.querySelectorAll(".giftfee").forEach(e => { e.textContent = money(c.giftFee); });
 }
 
 function update() {
   renderMenu();
+  renderPayments();
+  renderDynamicText();
   const st = state.status, closed = !!st.wedClosed;
   const customClosed = !!st.customClosed, fullyClosed = closed && customClosed;
   CONFIG.pickupOptions.forEach(o => {
@@ -388,8 +432,10 @@ function update() {
   });
   CONFIG.pickupOptions.forEach(o => {
     if (!o.limited) return;
-    o.text.textContent = "Standard " + dayName(st.pickupDate) + " Porch Pickup";
-    o.small.textContent = (st.pickupDate ? fmtDate(st.pickupDate) + " · " : "") + o.note;
+    const cc = cfg();
+    o.text.textContent = "Standard " + (st.pickupDate ? dayName(st.pickupDate) + " " : "") + cc.pickupStyle;
+    o.small.textContent = (st.pickupDate ? fmtDate(st.pickupDate) + " · " : "") +
+      (st.pickupTime ? st.pickupTime + " in " + cc.location + " · " : "") + o.note;
     o.input.disabled = closed;
     o.el.style.opacity = closed ? ".5" : "";
     o.el.style.cursor = closed ? "not-allowed" : "";
@@ -403,7 +449,7 @@ function update() {
   if (fullyClosed) {
     nb.append(h("div", {}, st.weekNote || "Orders are closed this week."));
     nb.append(h("div", {}, CONFIG.whatsappText + " ",
-      h("a", { href: CONFIG.whatsappUrl, target: "_blank", rel: "noopener", style: "color:var(--accent-dark);text-decoration:underline" }, CONFIG.whatsappLinkLabel)));
+      h("a", { href: cfg().whatsappUrl, target: "_blank", rel: "noopener", style: "color:var(--accent-dark);text-decoration:underline" }, CONFIG.whatsappLinkLabel)));
   }
   nb.classList.toggle("hidden", !st.notice && !fullyClosed);
   const wn = $("weekNote"); wn.textContent = st.weekNote || "";
@@ -412,7 +458,7 @@ function update() {
   $("bar").classList.toggle("hidden", fullyClosed);
 
   let hint = state.pickup ? "" : "Choose a pickup option to start adding items.";
-  if (state.pickup && state.pickup.limited && st.pickupDate) hint = dayName(st.pickupDate) + " pickup: " + fmtDate(st.pickupDate) + ".";
+  if (state.pickup && state.pickup.limited && st.pickupDate) hint = dayName(st.pickupDate) + " pickup: " + fmtDate(st.pickupDate) + (st.pickupTime ? ", " + st.pickupTime : "") + ".";
   if (state.pickup && !state.pickup.limited) hint = "Custom requests aren't guaranteed. I'll review yours and reach out to confirm before anything is final.";
   $("pickupHint").textContent = hint;
 
@@ -452,7 +498,7 @@ function update() {
     });
   });
   renderGiftList();
-  const fee = $("f-gift").checked ? state.giftSel.size * CONFIG.giftFee : 0;
+  const fee = $("f-gift").checked ? state.giftSel.size * cfg().giftFee : 0;
   $("total").textContent = money(total + fee);
   $("totalNote").textContent = fee ? "Includes " + money(fee) + " gift packaging" : "Order total";
 }
@@ -479,7 +525,7 @@ async function submit() {
 
   const gift = $("f-gift").checked;
   if (gift && !state.giftSel.size) return showErr("Please choose which items are gifts, or uncheck the gift box.");
-  const giftFee = gift ? state.giftSel.size * CONFIG.giftFee : 0;
+  const giftFee = gift ? state.giftSel.size * cfg().giftFee : 0;
   const btn = $("submit"); btn.disabled = true; btn.textContent = "Sending…";
   const payload = { name, email, phone, notes: $("f-notes").value.trim(),
                     pickup: state.pickup.id, pickupDate: state.status.pickupDate || "", payment: state.payment,
@@ -516,14 +562,14 @@ function finish(p, res) {
       ? "Your custom pickup request is in" + oid + ". It isn't confirmed yet. I'll review it and reach out to you, and I'll do my best to make it work!"
       : "Your order is in" + oid + ". You'll get a message (WhatsApp or email) with payment details. Your order is officially locked in once payment is received."),
     res.emailSent ? h("div", { style: "margin-top:8px;color:var(--muted);font-size:.9rem" }, "A confirmation email was sent to " + p.email + ". If you don't see it, please check your spam folder.") : "",
-    /^venmo/i.test(p.payment) ? h("div", { class: "no-print", style: "margin-top:14px" },
-      h("a", { href: CONFIG.venmoUrl, target: "_blank", rel: "noopener", style: "color:var(--accent-dark);font-weight:600" }, "Click here"),
+    /^venmo/i.test(p.payment) && cfg().venmoUrl ? h("div", { class: "no-print", style: "margin-top:14px" },
+      h("a", { href: cfg().venmoUrl, target: "_blank", rel: "noopener", style: "color:var(--accent-dark);font-weight:600" }, "Click here"),
       " to pay for your order through Venmo.") : "",
     h("div", { class: "sum" },
       p.items.map(l => row(l.qty + " × " + l.item, money(l.qty * l.price))),
       res.giftFee ? row("Gift packaging × " + p.items.reduce((s, l) => s + (l.giftQty || 0), 0), money(res.giftFee)) : "",
       row("Total", money(res.total), "border-top:1px solid var(--line);margin-top:6px;padding-top:6px;font-weight:700"),
-      row("Pickup", p.pickup === "Wednesday" ? dayName(res.pickupDate) + (res.pickupDate ? " (" + fmtDate(res.pickupDate) + ")" : "") : "Custom (see notes below)", "color:var(--muted);margin-top:6px"),
+      row("Pickup", p.pickup !== "Other" ? dayName(res.pickupDate) + (res.pickupDate ? " (" + fmtDate(res.pickupDate) + ")" : "") + (res.pickupTime ? ", " + res.pickupTime : "") : "Custom (see notes below)", "color:var(--muted);margin-top:6px"),
       row("Payment", p.payment, "color:var(--muted)"),
       p.notes ? h("div", { style: "flex-direction:column;gap:2px;color:var(--muted)" },
         h("span", {}, "Special Notes Or Requests"),
