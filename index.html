@@ -116,6 +116,11 @@
       <div class="hint" id="pickupHint"></div>
     </div>
     <div id="cats"><div class="card"><div class="step">Step 2</div><div class="hint">Loading the menu…</div></div></div>
+    <div class="card" id="customReq">
+      <h2>Other / Custom Request</h2>
+      <p class="hint">Looking for something that isn't on the menu? Select this option and describe what you have in mind in the Special Notes section at the bottom. Because of seasonal ingredients and my current kitchen capacity, I can't promise every request, so I'll reach out to let you know if I can make it happen. There's no charge to submit a request, and nothing is due until we've agreed on the details.</p>
+      <label class="check"><input type="checkbox" id="f-custom"> Yes, I'd like to submit a custom request</label>
+    </div>
     <div class="card">
       <div class="step">Step 3 · Optional</div>
       <h2>Giving this as a gift?</h2>
@@ -151,6 +156,7 @@
     <div class="card">
       <div class="step">Step 5</div>
       <h2>Payment Method Acknowledgement <span class="req">*</span></h2>
+      <p class="hint">Not needed if you're only submitting a custom request. I'll reach out about payment once it's confirmed.</p>
       <div class="pickups" id="payments"></div>
     </div>
     <div class="card">
@@ -186,7 +192,7 @@ const CONFIG = {
   giftFee: 2, // per item, when "Giving this as a gift" is checked
   // These are only fallbacks. The day, time, location, payments, fee and links come from the Settings tab of the sheet.
   pickupOptions: [
-    { id: "Standard", label: "Standard Porch Pickup", note: "limited weekly quantities", limited: true },
+    { id: "Standard", label: "Porch Pickup", note: "limited weekly quantities", limited: true },
     { id: "Other",     label: "Custom Pickup Day / Time",        note: "Request only, not guaranteed. Add your preferred date/time in the Special Notes section", limited: false }
   ],
   paymentOptions: [
@@ -283,6 +289,7 @@ function build() {
     menuOf().forEach(cat => cat.items.forEach(it => { for (let n = 1; n <= (state.qty[it.id] || 0); n++) state.giftSel.add(it.id + "#" + n); }));
     state.giftSig = null; update();
   });
+  $("f-custom").addEventListener("change", () => { state.customReq = $("f-custom").checked; update(); });
   $("f-gift").addEventListener("change", () => {
     $("giftFields").classList.toggle("hidden", !$("f-gift").checked);
     update();
@@ -446,7 +453,7 @@ function update() {
   CONFIG.pickupOptions.forEach(o => {
     if (!o.limited) return;
     const cc = cfg();
-    o.text.textContent = "Standard " + (st.pickupDate ? dayName(st.pickupDate) + " " : "") + cc.pickupStyle;
+    o.text.textContent = (st.pickupDate ? dayName(st.pickupDate) + " " : "") + cc.pickupStyle;
     o.small.textContent = (st.pickupDate ? fmtDate(st.pickupDate) + " · " : "") +
       (st.pickupTime ? st.pickupTime + " in " + cc.location + " · " : "") + o.note;
     o.input.disabled = closed;
@@ -534,13 +541,15 @@ async function submit() {
       giftQty: $("f-gift").checked ? [...state.giftSel].filter(k => k.startsWith(it.id + "#")).length : 0 });
   }));
   if (!state.pickup) return showErr("Please choose a pickup option.");
-  if (!lines.length) return showErr("Please add at least one item to your order.");
+  const customReq = $("f-custom").checked;
+  if (!lines.length && !customReq) return showErr("Please add at least one item to your order, or choose Other / Custom Request.");
+  if (customReq && !$("f-notes").value.trim()) return showErr("For a custom request, please describe what you're looking for in the Special Notes section.");
   if (!name) return showErr("Please enter your name.");
   if (!/^\S+@\S+\.\S+$/.test(email)) return showErr("Please enter a valid email so I can confirm your order.");
   const phone = $("f-phone").value.trim();
   if (phone.replace(/\D/g, "").length < 10) return showErr("Please enter a phone number with area code so I can reach you.");
 
-  if (!state.payment) return showErr("Please choose a payment method.");
+  if (lines.length && !state.payment) return showErr("Please choose a payment method.");
   if (state.pickup.id === "Other" && !$("f-notes").value.trim()) return showErr("For a custom pickup, please add your preferred date and time in the Special Notes section.");
 
   const gift = $("f-gift").checked;
@@ -548,7 +557,8 @@ async function submit() {
   const giftFee = gift ? state.giftSel.size * cfg().giftFee : 0;
   const btn = $("submit"); btn.disabled = true; btn.textContent = "Sending…";
   const payload = { name, email, phone, notes: $("f-notes").value.trim(),
-                    pickup: state.pickup.id, pickupDate: state.status.pickupDate || "", payment: state.payment,
+                    pickup: state.pickup.id, pickupDate: state.status.pickupDate || "",
+                    payment: state.payment || "None yet (custom request)", customRequest: customReq,
                     whatsapp: state.optedIn ? "Already added" : ((document.querySelector("input[name=whatsapp]:checked") || {}).value || ""),
                     gift, giftMessage: gift ? $("f-giftmsg").value.trim() : "", items: lines };
   try {
@@ -577,20 +587,26 @@ function finish(p, res) {
   const d = $("done"); d.classList.remove("hidden"); d.textContent = "";
   const oid = res.orderId ? " (#" + res.orderId + ")" : "";
   const row = (a, b, style) => h("div", style ? { style } : {}, h("span", {}, a), h("span", {}, b));
+  const customOnly = !!res.customOnly;
+  const doneMsg = p.pickup === "Other"
+    ? "Your custom pickup request is in" + oid + ". It isn't confirmed yet. I'll review it and reach out to you, and I'll do my best to make it work!"
+    : customOnly
+      ? "Your custom request is in" + oid + ". It isn't confirmed yet. I'll review it and reach out to let you know if I can make it happen. Nothing is due until then!"
+      : "Your order is in" + oid + ". You'll get a message (WhatsApp or email) with payment details. Your order is officially locked in once payment is received." +
+        (p.customRequest ? " Your custom request isn't confirmed yet. I'll reach out to let you know if I can make it happen." : "");
   d.append(h("h2", {}, "Thank you, " + p.name.split(" ")[0] + "!"),
-    h("div", {}, p.pickup === "Other"
-      ? "Your custom pickup request is in" + oid + ". It isn't confirmed yet. I'll review it and reach out to you, and I'll do my best to make it work!"
-      : "Your order is in" + oid + ". You'll get a message (WhatsApp or email) with payment details. Your order is officially locked in once payment is received."),
+    h("div", {}, doneMsg),
     res.emailSent ? h("div", { style: "margin-top:8px;color:var(--muted);font-size:.9rem" }, "A confirmation email was sent to " + p.email + ". If you don't see it, please check your spam folder.") : "",
-    /^venmo/i.test(p.payment) && cfg().venmoUrl ? h("div", { class: "no-print", style: "margin-top:14px" },
+    /^venmo/i.test(p.payment) && cfg().venmoUrl && res.total > 0 ? h("div", { class: "no-print", style: "margin-top:14px" },
       h("a", { href: cfg().venmoUrl, target: "_blank", rel: "noopener", style: "color:var(--accent-dark);font-weight:600" }, "Click here"),
       " to pay for your order through Venmo.") : "",
     h("div", { class: "sum" },
       p.items.map(l => row(l.qty + " × " + l.item, money(l.qty * l.price))),
+      p.customRequest ? row("1 × Custom request (see notes below)", money(0)) : "",
       res.giftFee ? row("Gift packaging × " + p.items.reduce((s, l) => s + (l.giftQty || 0), 0), money(res.giftFee)) : "",
       row("Total", money(res.total), "border-top:1px solid var(--line);margin-top:6px;padding-top:6px;font-weight:700"),
-      row("Pickup", p.pickup !== "Other" ? dayName(res.pickupDate) + (res.pickupDate ? " (" + fmtDate(res.pickupDate) + ")" : "") + (res.pickupTime ? ", " + res.pickupTime : "") : "Custom (see notes below)", "color:var(--muted);margin-top:6px"),
-      row("Payment", p.payment, "color:var(--muted)"),
+      row("Pickup", p.pickup !== "Other" && !customOnly ? dayName(res.pickupDate) + (res.pickupDate ? " (" + fmtDate(res.pickupDate) + ")" : "") + (res.pickupTime ? ", " + res.pickupTime : "") : "Custom (see notes below)", "color:var(--muted);margin-top:6px"),
+      customOnly ? "" : row("Payment", p.payment, "color:var(--muted)"),
       p.notes ? h("div", { style: "flex-direction:column;gap:2px;color:var(--muted)" },
         h("span", {}, "Special Notes Or Requests"),
         h("span", { style: "text-align:left;white-space:pre-wrap;color:var(--ink)" }, p.notes)) : ""),
