@@ -82,6 +82,11 @@
   .btn.alt{background:#fff;color:var(--accent-dark)}
   .btn.alt:hover{background:var(--warn-bg)}
   .hidden{display:none!important}
+  @media print{
+    body{background:#fff}
+    .bar,.actions{display:none!important}
+    .card{border:0}
+  }
 </style>
 </head>
 <body>
@@ -130,7 +135,7 @@
         <label>Email <span class="req">*</span><input id="f-email" type="email" autocomplete="email" required></label>
         <label>Phone number <span class="req">*</span><input id="f-phone" type="tel" autocomplete="tel" required></label>
       </div>
-      <div style="margin-top:18px">
+      <div style="margin-top:18px" id="waSection">
         <div class="hint" style="margin-top:0"><strong>Check here to be added to our local WhatsApp group!</strong> Get priority access to weekly menu drops, first dibs on bake-day extras, and exclusive subscriber-only discounts. (Optional)</div>
         <div class="pickups" id="whatsapp">
           <label><input type="radio" name="whatsapp" value="Yes! Add me for early menu drops & extra bake alerts">Yes! Add me for early menu drops &amp; extra bake alerts</label>
@@ -190,7 +195,7 @@ const $ = (id) => document.getElementById(id);
 const money = (n) => CONFIG.currency + n.toFixed(2);
 const DEMO = CONFIG.scriptUrl.startsWith("PASTE_");
 
-const state = { pickup: null, payment: null, giftSel: new Set(), giftSig: null, qty: {}, menuSig: null,
+const state = { optedIn: false, optSeq: 0, pickup: null, payment: null, giftSel: new Set(), giftSig: null, qty: {}, menuSig: null,
                 status: { capacity: {}, used: {}, pickupDate: "", menu: [] }, refs: {} };
 
 function h(tag, props, ...kids) {
@@ -454,7 +459,7 @@ async function submit() {
   const btn = $("submit"); btn.disabled = true; btn.textContent = "Sending…";
   const payload = { name, email, phone, notes: $("f-notes").value.trim(),
                     pickup: state.pickup.id, pickupDate: state.status.pickupDate || "", payment: state.payment,
-                    whatsapp: (document.querySelector("input[name=whatsapp]:checked") || {}).value || "",
+                    whatsapp: state.optedIn ? "Already added" : ((document.querySelector("input[name=whatsapp]:checked") || {}).value || ""),
                     gift, giftMessage: gift ? $("f-giftmsg").value.trim() : "", items: lines };
   try {
     let res;
@@ -486,17 +491,42 @@ function finish(p, res) {
     h("div", {}, p.pickup === "Other"
       ? "Your custom pickup request is in" + oid + ". It isn't confirmed yet. I'll review it and reach out to you, and I'll do my best to make it work!"
       : "Your order is in" + oid + ". You'll get a message (WhatsApp or email) with payment details. Your order is officially locked in once payment is received."),
+    res.emailSent ? h("div", { style: "margin-top:8px;color:var(--muted);font-size:.9rem" }, "A confirmation email was sent to " + p.email + ". If you don't see it, please check your spam folder.") : "",
     h("div", { class: "sum" },
       p.items.map(l => row(l.qty + " × " + l.item, money(l.qty * l.price))),
       res.giftFee ? row("Gift packaging × " + p.items.reduce((s, l) => s + (l.giftQty || 0), 0), money(res.giftFee)) : "",
       row("Total", money(res.total), "border-top:1px solid var(--line);margin-top:6px;padding-top:6px;font-weight:700"),
-      row("Pickup", p.pickup === "Wednesday" ? dayName(res.pickupDate) + (res.pickupDate ? " (" + fmtDate(res.pickupDate) + ")" : "") : "Custom (see your notes)", "color:var(--muted);margin-top:6px"),
-      row("Payment", p.payment, "color:var(--muted)")),
+      row("Pickup", p.pickup === "Wednesday" ? dayName(res.pickupDate) + (res.pickupDate ? " (" + fmtDate(res.pickupDate) + ")" : "") : "Custom (see notes below)", "color:var(--muted);margin-top:6px"),
+      row("Payment", p.payment, "color:var(--muted)"),
+      p.notes ? h("div", { style: "flex-direction:column;gap:2px;color:var(--muted)" },
+        h("span", {}, "Special Notes Or Requests"),
+        h("span", { style: "text-align:left;white-space:pre-wrap;color:var(--ink)" }, p.notes)) : ""),
     h("div", { class: "actions" },
+      h("button", { class: "btn alt", type: "button", onclick: () => window.print() }, "Print receipt"),
       h("a", { class: "btn", href: "https://babs.s.gy/order", target: "_top" }, "Place Another Order"),
       h("a", { class: "btn alt", href: "https://babs.s.gy/menu", target: "_blank", rel: "noopener" }, "See BABS Menu")));
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
+
+// If this email or phone already said "Yes" to the WhatsApp group on a past order, hide that question.
+async function checkOptIn() {
+  if (DEMO) return;
+  const email = $("f-email").value.trim(), phone = $("f-phone").value.trim();
+  const okEmail = /^\S+@\S+\.\S+$/.test(email), okPhone = phone.replace(/\D/g, "").length >= 10;
+  const seq = ++state.optSeq;
+  let yes = false;
+  if (okEmail || okPhone) {
+    try {
+      const r = await fetch(CONFIG.scriptUrl + "?action=optin&email=" + encodeURIComponent(okEmail ? email : "") + "&phone=" + encodeURIComponent(okPhone ? phone : ""));
+      yes = !!(await r.json()).optedIn;
+    } catch (e) { yes = false; }
+  }
+  if (seq !== state.optSeq) return; // a newer check is already running
+  state.optedIn = yes;
+  $("waSection").classList.toggle("hidden", yes);
+}
+$("f-email").addEventListener("change", checkOptIn);
+$("f-phone").addEventListener("change", checkOptIn);
 
 build();
 update();
