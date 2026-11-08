@@ -186,7 +186,7 @@ const CONFIG = {
   giftFee: 2, // per item, when "Giving this as a gift" is checked
   // These are only fallbacks. The day, time, location, payments, fee and links come from the Settings tab of the sheet.
   pickupOptions: [
-    { id: "Standard", label: "Porch Pickup", note: "limited weekly quantities", limited: true },
+    { id: "Standard", label: "Standard Porch Pickup", note: "limited weekly quantities", limited: true },
     { id: "Other",     label: "Custom Pickup Day / Time",        note: "Request only, not guaranteed. Add your preferred date/time in the Special Notes section", limited: false }
   ],
   paymentOptions: [
@@ -246,12 +246,21 @@ async function loadStatus() {
       ] };
     return;
   }
+  // Show the last menu this browser saw straight away (if it's less than a day old), then refresh it in the background.
+  try {
+    const saved = JSON.parse(localStorage.getItem("babs_status") || "null");
+    if (saved && saved.t && Date.now() - saved.t < 864e5 && saved.s && saved.s.menu) {
+      state.status = saved.s; state.loaded = true; update();
+    }
+  } catch (e) { /* no saved copy: fine */ }
   try {
     const r = await fetch(CONFIG.scriptUrl);
     state.status = await r.json();
+    try { localStorage.setItem("babs_status", JSON.stringify({ t: Date.now(), s: state.status })); } catch (e) { /* storage blocked: fine */ }
   } catch (e) {
-    showErr("Couldn't check availability right now. Please refresh the page.");
+    if (!state.loaded) showErr("Couldn't check availability right now. Please refresh the page.");
   }
+  state.loaded = true;
 }
 
 function build() {
@@ -414,6 +423,8 @@ function renderDynamicText() {
   }
   const lo = $("introLocation"); lo.textContent = "";
   lo.append("📍 ", h("strong", {}, "Pickup Location:"), " " + loc + (/[.!?)]$/.test(loc) ? "" : "."));
+  // keep these two lines invisible until the real settings are known, so they don't visibly change after loading
+  [li, lo].forEach(e => { e.style.visibility = state.loaded || DEMO ? "" : "hidden"; });
   document.querySelectorAll(".pickday").forEach(e => { e.textContent = day === "standard" ? "weekly" : day; });
   document.querySelectorAll(".giftfee").forEach(e => { e.textContent = money(c.giftFee); });
 }
