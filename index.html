@@ -84,7 +84,7 @@
   .hidden{display:none!important}
   @media print{
     body{background:#fff}
-    .bar,.actions{display:none!important}
+    .bar,.actions,.no-print{display:none!important}
     .card{border:0}
   }
 </style>
@@ -188,8 +188,9 @@ const CONFIG = {
   ],
   paymentOptions: [
     "Venmo Business @BeABlessingSourdough",
-    "Cash (Dropped off prior to bake cutoff date)"
+    "Cash (Must arrange with Lis prior to pickup)"
   ],
+  venmoUrl: "https://www.venmo.com/u/beablessingsourdough",
   fullMessage: "Thank you so much for the love! We have officially hit our maximum baking capacity for this item. Check back next week, or keep an eye on our WhatsApp community for any extra pop-up loaves!"
 };
 /* ============================================================ */
@@ -495,6 +496,9 @@ function finish(p, res) {
       ? "Your custom pickup request is in" + oid + ". It isn't confirmed yet. I'll review it and reach out to you, and I'll do my best to make it work!"
       : "Your order is in" + oid + ". You'll get a message (WhatsApp or email) with payment details. Your order is officially locked in once payment is received."),
     res.emailSent ? h("div", { style: "margin-top:8px;color:var(--muted);font-size:.9rem" }, "A confirmation email was sent to " + p.email + ". If you don't see it, please check your spam folder.") : "",
+    /^venmo/i.test(p.payment) ? h("div", { class: "no-print", style: "margin-top:14px" },
+      h("a", { href: CONFIG.venmoUrl, target: "_blank", rel: "noopener", style: "color:var(--accent-dark);font-weight:600" }, "Click here"),
+      " to pay for your order through Venmo.") : "",
     h("div", { class: "sum" },
       p.items.map(l => row(l.qty + " × " + l.item, money(l.qty * l.price))),
       res.giftFee ? row("Gift packaging × " + p.items.reduce((s, l) => s + (l.giftQty || 0), 0), money(res.giftFee)) : "",
