@@ -36,11 +36,17 @@
   .item .nm{font-weight:bold}
   .item .ds{font-size:.84rem;color:var(--muted)}
   .item .pr{font-size:.9rem;color:var(--accent-dark)}
+  .item .left{display:inline-block;margin-left:8px;font-size:.74rem;background:var(--warn-bg);color:var(--warn-ink);padding:1px 8px;border-radius:99px}
+  .item.soldout{background:#f0f0f0;margin:0 -18px;padding:12px 18px}
+  .item.soldout .nm,.item.soldout .ds,.item.soldout .pr{color:#9a9a9a;text-decoration:none}
+  .item.soldout .stepper{display:none}
+  .soldtag{display:none;font-size:.78rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#777;background:#e0e0e0;padding:5px 12px;border-radius:99px;white-space:nowrap}
+  .item.soldout .soldtag{display:inline-block}
   .stepper{display:flex;align-items:center;gap:10px}
   .stepper button{width:34px;height:34px;border-radius:50%;border:1.5px solid var(--accent);background:#fff;color:var(--accent);font-size:1.2rem;line-height:1;cursor:pointer}
   .stepper button:disabled{opacity:.3;cursor:not-allowed}
   .stepper span{min-width:20px;text-align:center;font-weight:600}
-  .cat.locked .item{opacity:.45}
+  .cat.locked .item:not(.soldout){opacity:.45}
   .fields{display:grid;gap:12px;margin-top:10px}
   .fields label{display:block;font-size:.85rem;color:var(--muted)}
   .fields input,.fields textarea{width:100%;margin-top:4px;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;font:inherit;font-size:1rem;background:#fff;color:var(--ink)}
@@ -102,7 +108,7 @@
       <div class="pickups" id="pickups"></div>
       <div class="hint" id="pickupHint"></div>
     </div>
-    <div id="cats"></div>
+    <div id="cats"><div class="card"><div class="step">Step 2</div><div class="hint">Loading the menu…</div></div></div>
     <div class="card">
       <div class="step">Step 3 · Optional</div>
       <h2>Giving this as a gift?</h2>
@@ -159,9 +165,9 @@
 <script src="config.js"></script>
 <script>
 /* ============================================================
-   EDIT THIS SECTION: your business name, items and prices.
-   Capacity limits live in Code.gs (the Google Apps Script),
-   so the category names below MUST match the names there.
+   The MENU (items, names, prices, Sold Out / Not Available and
+   quantities) now lives in the "Menu" tab of your Google Sheet.
+   Nothing about the menu needs to be edited here.
    ============================================================ */
 const CONFIG = {
   scriptUrl: window.BABS_SCRIPT_URL || "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE", // set in config.js
@@ -176,41 +182,7 @@ const CONFIG = {
     "Venmo Business @BeABlessingSourdough",
     "Cash (Dropped off prior to bake cutoff date)"
   ],
-  fullMessage: "Thank you so much for the love! We have officially hit our maximum baking capacity for this item. Check back next week, or keep an eye on our WhatsApp community for any extra pop-up loaves!",
-  categories: [
-    { name: "Traditional Sourdough Boules", items: [
-      { id: "b1", name: "Plain Rustic Boule", desc: "", price: 8 },
-      { id: "b2", name: "Chocolate Chip Boule", desc: "", price: 10 },
-      { id: "b3", name: "Cranberry Almond Boule (Seasonal Nov-Dec)", desc: "", price: 10 },
-      { id: "b4", name: "Sourdough Pumpkin Boule (Seasonal Sept-Nov)", desc: "", price: 12 }
-    ]},
-    { name: "Everyday Sourdough Sandwich Loaves", items: [
-      { id: "s1", name: "White Sourdough Sandwich Bread (13x5 loaf)", desc: "", price: 10 },
-      { id: "s2", name: "Honey Oat Sourdough Sandwich Bread (13x5 loaf)", desc: "", price: 12 },
-      { id: "s3", name: "Cinnamon Swirl Loaf (13x5 loaf)", desc: "", price: 14 },
-      { id: "s4", name: "Seeded Honey Oat & Wheat Loaf", desc: "", price: 16 }
-    ]},
-    { name: "Rolls, Buns & Other", items: [
-      { id: "r1", name: "9 Pack Dinner Rolls", desc: "", price: 9 },
-      { id: "r2", name: "8 Pack Garlic Bread Sticks", desc: "", price: 10 },
-      { id: "r3", name: "8 Pack Hamburger Buns", desc: "", price: 12 }
-    ]},
-    { name: "Sweets & Treats", items: [
-      { id: "t1", name: "Single Serve Jumbo 10 oz Buttermilk Sourdough Cinnamon Roll", desc: "", price: 4 },
-      { id: "t2", name: "Single Serve Jumbo Choco Chip Cookie", desc: "", price: 4 },
-      { id: "t3", name: "1 Lb Banana Bread Loaf", desc: "", price: 9 },
-      { id: "t4", name: "1/2 Dozen Gourmet Choco Chip Cookies", desc: "", price: 15 },
-      { id: "t5", name: "9 Pack Buttermilk Sourdough Cinnamon Rolls", desc: "", price: 18 }
-    ]},
-    { name: "Holiday Bundles", items: [
-      { id: "h1", name: "Comfort & Joy", desc: "", price: 16 },
-      { id: "h2", name: "The Warm Starter Set", desc: "", price: 18 },
-      { id: "h3", name: "Cozy Home Bundle", desc: "", price: 24 },
-      { id: "h4", name: "Bakehouse Breakfast Bundle", desc: "", price: 35 },
-      { id: "h5", name: "Get Started Bundle", desc: "", price: 49 },
-      { id: "h6", name: "The Ultimate Starter Bundle", desc: "", price: 68 }
-    ]}
-  ]
+  fullMessage: "Thank you so much for the love! We have officially hit our maximum baking capacity for this item. Check back next week, or keep an eye on our WhatsApp community for any extra pop-up loaves!"
 };
 /* ============================================================ */
 
@@ -218,7 +190,8 @@ const $ = (id) => document.getElementById(id);
 const money = (n) => CONFIG.currency + n.toFixed(2);
 const DEMO = CONFIG.scriptUrl.startsWith("PASTE_");
 
-const state = { pickup: null, payment: null, giftSel: new Set(), giftSig: null, qty: {}, status: { capacity: {}, used: {}, pickupDate: "" }, refs: {} };
+const state = { pickup: null, payment: null, giftSel: new Set(), giftSig: null, qty: {}, menuSig: null,
+                status: { capacity: {}, used: {}, pickupDate: "", menu: [] }, refs: {} };
 
 function h(tag, props, ...kids) {
   const e = document.createElement(tag);
@@ -231,11 +204,20 @@ function h(tag, props, ...kids) {
   return e;
 }
 
+const menuOf = () => state.status.menu || [];
+
 async function loadStatus() {
   if (DEMO) {
-    // Demo numbers so you can preview the sold-out behaviour before connecting the sheet.
-    state.status = { capacity: { "Traditional Sourdough Boules": 6, "Everyday Sourdough Sandwich Loaves": 4, "Rolls, Buns & Other": 6 },
-                     used: { "Traditional Sourdough Boules": 4, "Rolls, Buns & Other": 6 }, pickupDate: "" };
+    // Preview numbers so you can see the sold-out behaviour before connecting the sheet.
+    state.status = { capacity: { "Traditional Sourdough Boules": 6 }, used: { "Traditional Sourdough Boules": 4 }, pickupDate: "",
+      menu: [
+        { name: "Traditional Sourdough Boules", items: [
+          { id: "b1", name: "Plain Rustic Boule", desc: "", price: 8, soldOut: false, left: null },
+          { id: "b2", name: "Chocolate Chip Boule", desc: "", price: 10, soldOut: true, left: null } ] },
+        { name: "Holiday Bundles", items: [
+          { id: "h1", name: "Comfort & Joy", desc: "", price: 16, soldOut: false, left: 3 },
+          { id: "h2", name: "The Warm Starter Set", desc: "", price: 18, soldOut: false, left: 0 } ] }
+      ] };
     return;
   }
   try {
@@ -274,16 +256,33 @@ function build() {
   }));
 
   $("giftAll").addEventListener("click", () => {
-    CONFIG.categories.forEach(cat => cat.items.forEach(it => { for (let n = 1; n <= state.qty[it.id]; n++) state.giftSel.add(it.id + "#" + n); }));
+    menuOf().forEach(cat => cat.items.forEach(it => { for (let n = 1; n <= (state.qty[it.id] || 0); n++) state.giftSel.add(it.id + "#" + n); }));
     state.giftSig = null; update();
   });
   $("f-gift").addEventListener("change", () => {
     $("giftFields").classList.toggle("hidden", !$("f-gift").checked);
     update();
   });
+}
 
-  const cats = $("cats");
-  CONFIG.categories.forEach((cat, ci) => {
+// Builds the menu cards from the sheet. Only rebuilds when the menu itself changed.
+function renderMenu() {
+  const menu = menuOf();
+  const sig = JSON.stringify(menu.map(c => [c.name, c.items.map(i => [i.id, i.name, i.desc, i.price])]));
+  if (sig === state.menuSig) return;
+  state.menuSig = sig;
+
+  const keep = {};
+  menu.forEach(c => c.items.forEach(it => { keep[it.id] = state.qty[it.id] || 0; }));
+  state.qty = keep;
+  state.refs = {};
+
+  const cats = $("cats"); cats.textContent = "";
+  if (!menu.length) {
+    cats.append(h("div", { class: "card" }, h("div", { class: "step" }, "Step 2"), h("div", { class: "hint" }, "The menu is being updated. Please check back soon!")));
+    return;
+  }
+  menu.forEach((cat, ci) => {
     const badge = h("span", { class: "badge hidden" });
     const msg = h("div", { class: "full-msg hidden" }, CONFIG.fullMessage);
     const box = h("div", { class: "card cat" },
@@ -291,28 +290,31 @@ function build() {
       h("div", { class: "cat-head" }, h("h2", {}, cat.name), badge), msg);
     const rows = {};
     cat.items.forEach(it => {
-      state.qty[it.id] = 0;
       const val = h("span", {}, "0");
       const minus = h("button", { type: "button", "aria-label": "Remove one " + it.name }, "−");
       const plus = h("button", { type: "button", "aria-label": "Add one " + it.name }, "+");
       minus.addEventListener("click", () => { state.qty[it.id]--; update(); });
       plus.addEventListener("click", () => { state.qty[it.id]++; update(); });
-      box.append(h("div", { class: "item" },
+      const left = h("span", { class: "left hidden" });
+      const row = h("div", { class: "item" },
         h("div", {}, h("div", { class: "nm" }, it.name),
           it.desc ? h("div", { class: "ds" }, it.desc) : "",
-          h("div", { class: "pr" }, money(it.price))),
-        h("div", { class: "stepper" }, minus, val, plus)));
-      rows[it.id] = { val, minus, plus };
+          h("div", { class: "pr" }, money(it.price), left)),
+        h("div", { class: "stepper" }, minus, val, plus),
+        h("span", { class: "soldtag" }, "Sold Out"));
+      box.append(row);
+      rows[it.id] = { row, val, minus, plus, left };
     });
     cats.append(box);
     state.refs[cat.name] = { box, badge, msg, rows };
   });
+  state.giftSig = null;
 }
 
 function renderGiftList() {
   const units = [];
-  CONFIG.categories.forEach(cat => cat.items.forEach(it => {
-    const q = state.qty[it.id];
+  menuOf().forEach(cat => cat.items.forEach(it => {
+    const q = state.qty[it.id] || 0;
     for (let n = 1; n <= q; n++) units.push({ key: it.id + "#" + n, label: it.name + (q > 1 ? " (" + n + " of " + q + ")" : "") });
   }));
   const keys = new Set(units.map(u => u.key));
@@ -338,6 +340,15 @@ function catLimit(cat) {
   return Math.max(0, cap - (state.status.used[cat.name] || 0));
 }
 
+// Remaining quantity for one item (its own limit from the Menu tab), or Infinity.
+// 0 means sold out (marked Sold Out in the sheet, or all of its quantity is ordered).
+function itemLimit(it) {
+  if (it.soldOut) return 0;
+  if (it.left === null || it.left === undefined) return Infinity;
+  if (state.pickup && !state.pickup.limited) return Infinity; // custom requests are reviewed by hand
+  return it.left;
+}
+
 function fmtDate(iso) {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || "");
   if (!m) return iso || "";
@@ -351,6 +362,7 @@ function dayName(iso) {
 }
 
 function update() {
+  renderMenu();
   const st = state.status, closed = !!st.wedClosed;
   CONFIG.pickupOptions.forEach(o => {
     if (!o.limited) return;
@@ -374,10 +386,14 @@ function update() {
   if (state.pickup && !state.pickup.limited) hint = "Custom requests aren't guaranteed. I'll review yours and reach out to confirm before anything is final.";
   $("pickupHint").textContent = hint;
 
-  let total = 0, count = 0;
-  CONFIG.categories.forEach(cat => {
+  let total = 0;
+  menuOf().forEach(cat => {
     const r = state.refs[cat.name];
+    if (!r) return;
     const rem = catLimit(cat);
+
+    // an item can't hold more than it has left (or anything if sold out)
+    cat.items.forEach(it => { state.qty[it.id] = Math.min(state.qty[it.id] || 0, itemLimit(it)); });
     // clamp if the person switched to a limited pickup after picking items
     let sel = cat.items.reduce((s, it) => s + state.qty[it.id], 0);
     for (let i = cat.items.length - 1; sel > rem && i >= 0; i--) {
@@ -393,11 +409,16 @@ function update() {
     } else r.badge.classList.add("hidden");
 
     cat.items.forEach(it => {
-      const q = state.qty[it.id];
-      r.rows[it.id].val.textContent = q;
-      r.rows[it.id].minus.disabled = q === 0;
-      r.rows[it.id].plus.disabled = !state.pickup || sel >= rem;
-      total += q * it.price; count += q;
+      const q = state.qty[it.id], lim = itemLimit(it), x = r.rows[it.id];
+      const soldOut = lim === 0;
+      x.row.classList.toggle("soldout", soldOut);
+      x.val.textContent = q;
+      x.minus.disabled = q === 0;
+      x.plus.disabled = !state.pickup || sel >= rem || q >= lim;
+      const showLeft = !soldOut && lim !== Infinity;
+      x.left.textContent = lim + " left";
+      x.left.classList.toggle("hidden", !showLeft);
+      total += q * it.price;
     });
   });
   renderGiftList();
@@ -412,8 +433,8 @@ async function submit() {
   $("err").classList.add("hidden");
   const name = $("f-name").value.trim(), email = $("f-email").value.trim();
   const lines = [];
-  CONFIG.categories.forEach(cat => cat.items.forEach(it => {
-    if (state.qty[it.id] > 0) lines.push({ category: cat.name, item: it.name, qty: state.qty[it.id], price: it.price,
+  menuOf().forEach(cat => cat.items.forEach(it => {
+    if (state.qty[it.id] > 0) lines.push({ id: it.id, category: cat.name, item: it.name, qty: state.qty[it.id], price: it.price,
       giftQty: $("f-gift").checked ? [...state.giftSel].filter(k => k.startsWith(it.id + "#")).length : 0 });
   }));
   if (!state.pickup) return showErr("Please choose a pickup option.");
