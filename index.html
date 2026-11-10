@@ -479,7 +479,9 @@ function update() {
   const wn = $("weekNote"); wn.textContent = st.weekNote || "";
   wn.classList.toggle("hidden", !st.weekNote || fullyClosed);
   // "The nearest pickup already closed" notice (wording comes from the Settings tab)
-  const sk = $("skipNote"), skMsg = st.skipped && st.skipped.message && !closed ? st.skipped.message : "";
+  // Hidden while "Custom Pickup Day / Time" is selected; shows again when the standard pickup is chosen (or nothing is chosen yet).
+  const customPicked = !!(state.pickup && !state.pickup.limited);
+  const sk = $("skipNote"), skMsg = st.skipped && st.skipped.message && !closed && !customPicked ? st.skipped.message : "";
   sk.textContent = skMsg;
   sk.classList.toggle("hidden", !skMsg);
   document.querySelectorAll("#form > .card:not(.intro):not(#step1), #cats").forEach(el => {
