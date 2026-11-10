@@ -113,6 +113,7 @@
       <h2>Preferred Pickup Date &amp; Time Slot <span class="req">*</span></h2>
       <div class="notice hidden" id="closedMsg" style="margin-top:10px"></div>
       <div class="pickups" id="pickups"></div>
+      <div class="notice hidden" id="skipNote" style="margin:12px 0 0;font-size:.88rem"></div>
       <div class="hint" id="pickupHint"></div>
     </div>
     <div id="cats"><div class="card"><div class="step">Step 2</div><div class="hint">Loading the menu…</div></div></div>
@@ -477,6 +478,10 @@ function update() {
   cm.classList.toggle("hidden", !fullyClosed);
   const wn = $("weekNote"); wn.textContent = st.weekNote || "";
   wn.classList.toggle("hidden", !st.weekNote || fullyClosed);
+  // "The nearest pickup already closed" notice (wording comes from the Settings tab)
+  const sk = $("skipNote"), skMsg = st.skipped && st.skipped.message && !closed ? st.skipped.message : "";
+  sk.textContent = skMsg;
+  sk.classList.toggle("hidden", !skMsg);
   document.querySelectorAll("#form > .card:not(.intro):not(#step1), #cats").forEach(el => {
     el.classList.toggle("preview", fullyClosed);
     if (fullyClosed) el.setAttribute("inert", ""); else el.removeAttribute("inert");
@@ -605,7 +610,7 @@ function finish(p, res) {
       p.customRequest ? row("1 × Custom request (see notes below)", money(0)) : "",
       res.giftFee ? row("Gift packaging × " + p.items.reduce((s, l) => s + (l.giftQty || 0), 0), money(res.giftFee)) : "",
       row("Total", money(res.total), "border-top:1px solid var(--line);margin-top:6px;padding-top:6px;font-weight:700"),
-      row("Pickup", p.pickup !== "Other" && !customOnly ? dayName(res.pickupDate) + (res.pickupDate ? " (" + fmtDate(res.pickupDate) + ")" : "") + (res.pickupTime ? ", " + res.pickupTime : "") : "Custom (see notes below)", "color:var(--muted);margin-top:6px"),
+      row("Pickup", p.pickup !== "Other" && !customOnly ? dayName(res.pickupDate) + (res.pickupDate ? " (" + fmtDate(res.pickupDate) + ")" : "") + (res.pickupTime ? ", " + res.pickupTime : "") : "Custom (see notes below)", "font-weight:700;margin-top:6px"),
       customOnly ? "" : row("Payment", p.payment, "color:var(--muted)"),
       p.notes ? h("div", { style: "flex-direction:column;gap:2px;color:var(--muted)" },
         h("span", {}, "Special Notes Or Requests"),
