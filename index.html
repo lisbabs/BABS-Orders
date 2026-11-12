@@ -189,6 +189,7 @@
         <div class="fields hidden" id="tipCustomWrap">
           <label>Tip amount ($)<input id="f-tip" type="number" min="0" max="500" step="0.01" inputmode="decimal" placeholder="e.g. 5.00"></label>
         </div>
+        <div class="hint" id="tipHint"></div>
       </div>
       </div>
     </div>
@@ -269,6 +270,7 @@ const cfg = () => Object.assign({
   locationNote: "(Exact porch pickup address provided upon order confirmation)",
   cutoffDays: 2, cutoffText: "6:00 PM",
   vipMessage: "You are receiving a special friends & family discount from Lis for your order. Thanks for supporting me & I hope this blesses you!",
+  tipMessage: "Tips are completely optional and so appreciated. Thank you!",
   giftFee: CONFIG.giftFee, siteDiscount: 0, saleLabel: "Sale", payments: CONFIG.paymentOptions,
   venmoUrl: CONFIG.venmoUrl, whatsappUrl: CONFIG.whatsappUrl, fullMessage: CONFIG.fullMessage
 }, state.status.config || {});
@@ -652,6 +654,8 @@ function update() {
   const hideTip = tipHidden();
   if (hideTip && state.tipOn) { state.tipOn = false; syncTip(); }
   $("tipWrap").classList.toggle("hidden", hideTip);
+  const th = $("tipHint"); th.textContent = cfg().tipMessage || "";
+  th.classList.toggle("hidden", !cfg().tipMessage);
   const fee = $("f-gift").checked ? state.giftSel.size * cfg().giftFee : 0;
   const saved = roundC(wasSum - total);
   const tip = tipAmt();
