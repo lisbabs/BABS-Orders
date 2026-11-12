@@ -96,6 +96,7 @@
   .total small.save{color:#2e7d32;font-weight:600}
   .sum .was{color:#9a9a9a;text-decoration:line-through;margin-right:6px}
   .sum .save{color:#2e7d32;font-weight:600}
+  .vip-msg{background:var(--warn-bg);border:1.5px solid var(--accent);color:var(--warn-ink);border-radius:14px;padding:14px 18px;margin-bottom:18px;font-weight:600;font-size:.95rem;text-align:center}
   .preview{pointer-events:none;user-select:none;opacity:.5;filter:grayscale(1)}
   .hidden{display:none!important}
   @media print{
@@ -123,35 +124,8 @@
       </ul>
       <p>🔗 <strong>Explore BABS Menu &amp; Story:</strong> Visit <a href="https://babs.s.gy/menu" target="_blank" rel="noopener">https://babs.s.gy/menu</a> to view our full menu options and details!</p>
     </div>
-    <div class="card" id="step1">
+    <div class="card">
       <div class="step">Step 1</div>
-      <div class="notice hidden" id="weekNote" style="margin-top:10px"></div>
-      <h2>Preferred Pickup Date &amp; Time Slot <span class="req">*</span></h2>
-      <div class="notice hidden" id="closedMsg" style="margin-top:10px"></div>
-      <div class="pickups" id="pickups"></div>
-      <div class="notice hidden" id="skipNote" style="margin:12px 0 0;font-size:.88rem"></div>
-      <div class="hint" id="pickupHint"></div>
-    </div>
-    <div id="cats"><div class="card"><div class="step">Step 2</div><div class="hint">Loading the menu…</div></div></div>
-    <div class="card" id="customReq">
-      <h2>Other / Custom Request</h2>
-      <p class="hint">Looking for something that isn't on the menu? Select this option and describe what you have in mind in the Special Notes section at the bottom. Because of seasonal ingredients and my current kitchen capacity, I can't promise every request, so I'll reach out to let you know if I can make it happen. There's no charge to submit a request, and nothing is due until we've agreed on the details.</p>
-      <label class="check"><input type="checkbox" id="f-custom"> Yes, I'd like to submit a custom request</label>
-    </div>
-    <div class="card">
-      <div class="step">Step 3 · Optional</div>
-      <h2>Giving this as a gift?</h2>
-      <p class="hint">I will package it up beautifully for you! Check the box below, choose which items are gifts, and leave your To/From names or short message. (+<span class="giftfee">$2.00</span> per gift item)<br>Includes festive holiday twine or ribbon, a green sprig or seasonal accent, and a handwritten BABS gift tag.</p>
-      <label class="check"><input type="checkbox" id="f-gift"> Yes, I'm giving an item as a gift</label>
-      <div class="hidden" id="giftFields">
-        <div class="hint" style="margin-top:14px"><strong>Which items are gifts?</strong> (+<span class="giftfee">$2.00</span> each)</div>
-        <div id="giftList"></div>
-        <button type="button" class="linkbtn" id="giftAll">Select all</button>
-        <div class="fields"><label>To / From names or short message<textarea id="f-giftmsg" rows="3"></textarea></label></div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="step">Step 4</div>
       <h2>Your details</h2>
       <div class="hint"><span class="req">*</span> Required, so I can reach you about your order.</div>
       <div class="fields">
@@ -170,6 +144,33 @@
         </div>
       </div>
     </div>
+    <div class="card" id="pickupCard">
+      <div class="step">Step 2</div>
+      <div class="notice hidden" id="weekNote" style="margin-top:10px"></div>
+      <h2>Preferred Pickup Date &amp; Time Slot <span class="req">*</span></h2>
+      <div class="notice hidden" id="closedMsg" style="margin-top:10px"></div>
+      <div class="pickups" id="pickups"></div>
+      <div class="notice hidden" id="skipNote" style="margin:12px 0 0;font-size:.88rem"></div>
+      <div class="hint" id="pickupHint"></div>
+    </div>
+    <div id="cats"><div class="card"><div class="step">Step 3</div><div class="hint">Loading the menu…</div></div></div>
+    <div class="card" id="customReq">
+      <h2>Other / Custom Request</h2>
+      <p class="hint">Looking for something that isn't on the menu? Select this option and describe what you have in mind in the Special Notes section at the bottom. Because of seasonal ingredients and my current kitchen capacity, I can't promise every request, so I'll reach out to let you know if I can make it happen. There's no charge to submit a request, and nothing is due until we've agreed on the details.</p>
+      <label class="check"><input type="checkbox" id="f-custom"> Yes, I'd like to submit a custom request</label>
+    </div>
+    <div class="card">
+      <div class="step">Step 4 · Optional</div>
+      <h2>Giving this as a gift?</h2>
+      <p class="hint">I will package it up beautifully for you! Check the box below, choose which items are gifts, and leave your To/From names or short message. (+<span class="giftfee">$2.00</span> per gift item)<br>Includes festive holiday twine or ribbon, a green sprig or seasonal accent, and a handwritten BABS gift tag.</p>
+      <label class="check"><input type="checkbox" id="f-gift"> Yes, I'm giving an item as a gift</label>
+      <div class="hidden" id="giftFields">
+        <div class="hint" style="margin-top:14px"><strong>Which items are gifts?</strong> (+<span class="giftfee">$2.00</span> each)</div>
+        <div id="giftList"></div>
+        <button type="button" class="linkbtn" id="giftAll">Select all</button>
+        <div class="fields"><label>To / From names or short message<textarea id="f-giftmsg" rows="3"></textarea></label></div>
+      </div>
+    </div>
     <div class="card">
       <div class="step">Step 5</div>
       <h2>Payment Method Acknowledgement <span class="req">*</span></h2>
@@ -184,6 +185,7 @@
       <div class="fields"><label><textarea id="f-notes" rows="4"></textarea></label></div>
       <div class="err hidden" id="err"></div>
     </div>
+    <div class="vip-msg hidden" id="vipMsg"></div>
   </div>
   <div class="card done hidden" id="done"></div>
 </div>
@@ -229,7 +231,7 @@ const $ = (id) => document.getElementById(id);
 const money = (n) => CONFIG.currency + n.toFixed(2);
 const DEMO = CONFIG.scriptUrl.startsWith("PASTE_");
 
-const state = { optedIn: false, optSeq: 0, pickup: null, payment: null, giftSel: new Set(), giftSig: null, qty: {}, menuSig: null,
+const state = { vipPct: 0, discSeq: 0, optedIn: false, optSeq: 0, pickup: null, payment: null, giftSel: new Set(), giftSig: null, qty: {}, menuSig: null,
                 status: { capacity: {}, used: {}, pickupDate: "", menu: [] }, refs: {} };
 
 function h(tag, props, ...kids) {
@@ -250,13 +252,24 @@ const cfg = () => Object.assign({
   pickupStyle: "Porch Pickup", location: "Deerwood, MN",
   locationNote: "(Exact porch pickup address provided upon order confirmation)",
   cutoffDays: 2, cutoffText: "6:00 PM",
+  vipMessage: "You are receiving a special friends & family discount from Lis for your order. Thanks for supporting me & I hope this blesses you!",
   giftFee: CONFIG.giftFee, siteDiscount: 0, saleLabel: "Sale", payments: CONFIG.paymentOptions,
   venmoUrl: CONFIG.venmoUrl, whatsappUrl: CONFIG.whatsappUrl, fullMessage: CONFIG.fullMessage
 }, state.status.config || {});
 
 // What the customer pays for one item (sale price when discounted, otherwise the regular price).
-const unitPrice = (it) => (it.pct > 0 && typeof it.salePrice === "number") ? it.salePrice : it.price;
+// Friends & family: if this customer's phone is on the Customers tab, their % applies to items marked VIP = Yes,
+// but only when it is better than the item's own sale discount (they never stack). The server re-checks all of this.
+const vipPct = () => state.vipPct || 0;
+const effPct = (it) => (it.vip !== false && vipPct() > (it.pct || 0)) ? vipPct() : (it.pct || 0);
+const vipActive = () => vipPct() > 0 && menuOf().some(c => c.items.some(it => it.vip !== false && vipPct() > (it.pct || 0)));
 const roundC = (n) => Math.round(n * 100) / 100;
+const unitPrice = (it) => {
+  const p = effPct(it);
+  if (p <= 0) return it.price;
+  if (p === (it.pct || 0) && typeof it.salePrice === "number") return it.salePrice;
+  return roundC(it.price * (1 - p / 100));
+};
 const fmtPct = (n) => String(Math.round(n * 100) / 100); // 10 -> "10", 12.5 -> "12.5"
 
 function plural(n, word) { return n + " " + word + (n === 1 ? "" : "s"); }
@@ -343,7 +356,7 @@ function renderPayments() {
 // Builds the menu cards from the sheet. Only rebuilds when the menu itself changed.
 function renderMenu() {
   const menu = menuOf();
-  const sig = JSON.stringify([cfg().fullMessage, menu.map(c => [c.name, c.items.map(i => [i.id, i.name, i.desc, i.price, i.pct, i.salePrice])])]);
+  const sig = JSON.stringify([cfg().fullMessage, vipPct(), menu.map(c => [c.name, c.items.map(i => [i.id, i.name, i.desc, i.price, i.pct, i.salePrice, i.vip])])]);
   if (sig === state.menuSig) return;
   state.menuSig = sig;
 
@@ -354,14 +367,14 @@ function renderMenu() {
 
   const cats = $("cats"); cats.textContent = "";
   if (!menu.length) {
-    cats.append(h("div", { class: "card" }, h("div", { class: "step" }, "Step 2"), h("div", { class: "hint" }, "The menu is being updated. Please check back soon!")));
+    cats.append(h("div", { class: "card" }, h("div", { class: "step" }, "Step 3"), h("div", { class: "hint" }, "The menu is being updated. Please check back soon!")));
     return;
   }
   menu.forEach((cat, ci) => {
     const badge = h("span", { class: "badge hidden" });
     const msg = h("div", { class: "full-msg hidden" }, cfg().fullMessage);
     const box = h("div", { class: "card cat" },
-      h("div", { class: "step" }, ci === 0 ? "Step 2" : ""),
+      h("div", { class: "step" }, ci === 0 ? "Step 3" : ""),
       h("div", { class: "cat-head" }, h("h2", {}, cat.name), badge), msg);
     const rows = {};
     cat.items.forEach(it => {
@@ -375,8 +388,8 @@ function renderMenu() {
         h("div", {}, h("div", { class: "nm" }, it.name),
           it.desc ? h("div", { class: "ds" }, it.desc) : "",
           h("div", { class: "pr" },
-            it.pct > 0
-              ? [h("span", { class: "was" }, money(it.price)), h("span", { class: "now" }, money(unitPrice(it))), h("span", { class: "off" }, fmtPct(it.pct) + "% OFF")]
+            effPct(it) > 0
+              ? [h("span", { class: "was" }, money(it.price)), h("span", { class: "now" }, money(unitPrice(it))), h("span", { class: "off" }, fmtPct(effPct(it)) + "% OFF")]
               : money(it.price),
             left)),
         h("div", { class: "stepper" }, minus, val, plus),
@@ -498,11 +511,16 @@ function update() {
   }
   sb.classList.toggle("hidden", !(sd > 0));
 
+  // Friends & family message at the bottom of the page (text comes from the Settings tab)
+  const vm = $("vipMsg"), vt = vipActive() ? (cfg().vipMessage || "") : "";
+  vm.textContent = vt;
+  vm.classList.toggle("hidden", !vt);
+
   const nb = $("notice"); nb.textContent = "";
   if (st.notice) nb.append(h("div", {}, st.notice));
   nb.classList.toggle("hidden", !st.notice);
   // Fully closed (standard AND custom closed): the whole page stays visible as a preview of the menu.
-  // Step 1 shows the closed message, the other steps are greyed out and can't be used, and there is no Place order button.
+  // The pickup step shows the closed message, the other steps are greyed out and can't be used, and there is no Place order button.
   const cm = $("closedMsg"); cm.textContent = "";
   if (fullyClosed) {
     cm.append(h("div", {}, st.weekNote || "Orders are currently closed. Take a look at what I offer below, and check back soon!"));
@@ -518,7 +536,7 @@ function update() {
   const sk = $("skipNote"), skMsg = st.skipped && st.skipped.message && !closed && !customPicked ? st.skipped.message : "";
   sk.textContent = skMsg;
   sk.classList.toggle("hidden", !skMsg);
-  document.querySelectorAll("#form > .card:not(.intro):not(#step1), #cats").forEach(el => {
+  document.querySelectorAll("#form > .card:not(.intro):not(#pickupCard), #cats").forEach(el => {
     el.classList.toggle("preview", fullyClosed);
     if (fullyClosed) el.setAttribute("inert", ""); else el.removeAttribute("inert");
   });
@@ -586,7 +604,7 @@ async function submit() {
   const name = $("f-name").value.trim(), email = $("f-email").value.trim();
   const lines = [];
   menuOf().forEach(cat => cat.items.forEach(it => {
-    if (state.qty[it.id] > 0) lines.push({ id: it.id, category: cat.name, item: it.name, qty: state.qty[it.id], price: unitPrice(it), origPrice: it.price, pct: it.pct || 0,
+    if (state.qty[it.id] > 0) lines.push({ id: it.id, category: cat.name, item: it.name, qty: state.qty[it.id], price: unitPrice(it), origPrice: it.price, pct: effPct(it),
       giftQty: $("f-gift").checked ? [...state.giftSel].filter(k => k.startsWith(it.id + "#")).length : 0 });
   }));
   if (!state.pickup) return showErr("Please choose a pickup option.");
@@ -658,6 +676,7 @@ function finish(p, res) {
       p.customRequest ? row("1 × Custom request (see notes below)", money(0)) : "",
       res.giftFee ? row("Gift packaging × " + p.items.reduce((s, l) => s + (l.giftQty || 0), 0), money(res.giftFee)) : "",
       res.savings > 0 ? h("div", { class: "save" }, h("span", {}, "You saved"), h("span", {}, "−" + money(res.savings))) : "",
+      res.vip ? h("div", { style: "justify-content:flex-end;color:#2e7d32;font-size:.82rem;font-weight:600" }, h("span", {}, "💛 Receiving friends & family discount")) : "",
       row("Total", money(res.total), "border-top:1px solid var(--line);margin-top:6px;padding-top:6px;font-weight:700"),
       row("Pickup", p.pickup !== "Other" && !customOnly ? dayName(res.pickupDate) + (res.pickupDate ? " (" + fmtDate(res.pickupDate) + ")" : "") + (res.pickupTime ? ", " + res.pickupTime : "") : "Custom (see notes below)", "font-weight:700;margin-top:6px"),
       customOnly ? "" : row("Payment", p.payment, "color:var(--muted)"),
@@ -690,6 +709,25 @@ async function checkOptIn() {
   $("whatsapp").classList.toggle("hidden", yes);
   $("waMember").classList.toggle("hidden", !yes);
 }
+// Friends & family discount: look the phone number up in the Customers tab once it has 10+ digits.
+async function checkDiscount() {
+  if (DEMO) return;
+  const phone = $("f-phone").value.trim();
+  const ok = phone.replace(/\D/g, "").length >= 10;
+  const seq = ++state.discSeq;
+  let pct = 0;
+  if (ok) {
+    try {
+      const r = await fetch(CONFIG.scriptUrl + "?action=discount&phone=" + encodeURIComponent(phone));
+      pct = Number((await r.json()).discount) || 0;
+    } catch (e) { pct = 0; }
+  }
+  if (seq !== state.discSeq) return; // a newer lookup is already running
+  if (pct !== state.vipPct) { state.vipPct = pct; update(); }
+}
+let discTimer;
+$("f-phone").addEventListener("input", () => { clearTimeout(discTimer); discTimer = setTimeout(checkDiscount, 400); });
+$("f-phone").addEventListener("change", checkDiscount);
 $("f-email").addEventListener("change", checkOptIn);
 $("f-phone").addEventListener("change", checkOptIn);
 
