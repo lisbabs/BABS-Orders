@@ -98,9 +98,6 @@
   .sum .save{color:#2e7d32;font-weight:600}
   .vip-msg{background:var(--warn-bg);border:1.5px solid var(--accent);color:var(--warn-ink);border-radius:14px;padding:14px 18px;margin-bottom:18px;font-weight:600;font-size:.95rem;text-align:center}
   .preview{pointer-events:none;user-select:none;opacity:.5;filter:grayscale(1)}
-  .tipbtn{width:100%;background:#fff;color:var(--accent-dark);border:1.5px solid var(--accent);border-radius:10px;padding:12px 14px;font-size:.95rem;font-weight:600;cursor:pointer;text-align:left}
-  .tipbtn:hover{background:var(--warn-bg)}
-  .tipbtn.on{background:var(--warn-bg)}
   #tipOpts{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
   #tipOpts label{min-width:0;text-align:center;padding:10px 6px;font-weight:600}
   #tipOpts input{position:absolute;opacity:0;pointer-events:none}
@@ -184,15 +181,14 @@
       <p class="hint">Not needed if you're only submitting a custom request. I'll reach out about payment once it's confirmed.</p>
       <div class="pickups" id="payments"></div>
       <div id="tipWrap">
-      <div style="margin-top:14px">
-        <button type="button" class="tipbtn" id="tipToggle" aria-expanded="false">💛 I'd like to be a blessing and leave a tip</button>
+      <div class="pickups">
+        <label id="tipToggleLabel"><input type="radio" name="tipenable" id="tipToggle">I'd like to be a blessing and leave a tip</label>
       </div>
       <div class="hidden" id="tipBox">
         <div class="pickups" id="tipOpts"></div>
         <div class="fields hidden" id="tipCustomWrap">
           <label>Tip amount ($)<input id="f-tip" type="number" min="0" max="500" step="0.01" inputmode="decimal" placeholder="e.g. 5.00"></label>
         </div>
-        <div class="hint">Tips are completely optional and so appreciated. Thank you! 💛</div>
       </div>
       </div>
     </div>
@@ -301,14 +297,13 @@ function syncTip() {
     [...$("tipOpts").children].forEach(l => { l.classList.remove("on"); l.querySelector("input").checked = false; });
   }
   $("tipBox").classList.toggle("hidden", !state.tipOn);
-  $("tipToggle").classList.toggle("on", state.tipOn);
-  $("tipToggle").setAttribute("aria-expanded", state.tipOn ? "true" : "false");
+  $("tipToggle").checked = state.tipOn;
+  $("tipToggleLabel").classList.toggle("on", state.tipOn);
 }
 
-// The tip question is not shown for custom orders: a custom pickup, or a custom request with no menu items.
+// The tip question only shows once at least one menu item is selected (not for a custom-request-only order).
 function tipHidden() {
-  const anyItem = menuOf().some(c => c.items.some(it => (state.qty[it.id] || 0) > 0));
-  return !!((state.pickup && !state.pickup.limited) || (state.customReq && !anyItem));
+  return !menuOf().some(c => c.items.some(it => (state.qty[it.id] || 0) > 0));
 }
 
 // The tip the customer has chosen (0 if none). Presets are $1/$2/$3; "custom" reads the typed amount.
@@ -384,6 +379,7 @@ function build() {
     tipOpts.append(label);
   });
   $("f-tip").addEventListener("input", update);
+  // A radio that can be clicked again to turn the tip off
   $("tipToggle").addEventListener("click", () => {
     state.tipOn = !state.tipOn;
     syncTip();
@@ -666,7 +662,7 @@ function update() {
   note.classList.toggle("save", saved > 0);
   const incl = [];
   if (fee) incl.push(money(fee) + " gift packaging");
-  if (tip) incl.push(money(tip) + " tip 💛");
+  if (tip) incl.push(money(tip) + " tip");
   note.textContent = saved > 0
     ? "You save " + money(saved) + (incl.length ? " · incl. " + incl.join(" + ") : "")
     : (incl.length ? "Includes " + incl.join(" + ") : "Order total");
@@ -753,7 +749,7 @@ function finish(p, res) {
       }),
       p.customRequest ? row("1 × Custom request (see notes below)", money(0)) : "",
       res.giftFee ? row("Gift packaging × " + p.items.reduce((s, l) => s + (l.giftQty || 0), 0), money(res.giftFee)) : "",
-      res.tip > 0 ? row("Tip 💛 Thank you for being a blessing!", money(res.tip)) : "",
+      res.tip > 0 ? row("Tip", money(res.tip)) : "",
       res.savings > 0 ? h("div", { class: "save" }, h("span", {}, "You saved"), h("span", {}, "−" + money(res.savings))) : "",
       res.vip ? h("div", { style: "justify-content:flex-end;color:#2e7d32;font-size:.82rem;font-weight:600" }, h("span", {}, "💛 Receiving friends & family discount")) : "",
       row("Total", money(res.total), "border-top:1px solid var(--line);margin-top:6px;padding-top:6px;font-weight:700"),
