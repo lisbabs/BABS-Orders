@@ -98,6 +98,13 @@
   .sum .save{color:#2e7d32;font-weight:600}
   .vip-msg{background:var(--warn-bg);border:1.5px solid var(--accent);color:var(--warn-ink);border-radius:14px;padding:14px 18px;margin-bottom:18px;font-weight:600;font-size:.95rem;text-align:center}
   .preview{pointer-events:none;user-select:none;opacity:.5;filter:grayscale(1)}
+  .tipbtn{width:100%;background:#fff;color:var(--accent-dark);border:1.5px solid var(--accent);border-radius:10px;padding:12px 14px;font-size:.95rem;font-weight:600;cursor:pointer;text-align:left}
+  .tipbtn:hover{background:var(--warn-bg)}
+  .tipbtn.on{background:var(--warn-bg)}
+  #tipOpts{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  #tipOpts label{min-width:0;text-align:center;padding:10px 6px;font-weight:600}
+  #tipOpts input{position:absolute;opacity:0;pointer-events:none}
+  #tipBox{margin-top:12px}
   .hidden{display:none!important}
   @media print{
     body{background:#fff}
@@ -176,6 +183,18 @@
       <h2>Payment Method Acknowledgement <span class="req">*</span></h2>
       <p class="hint">Not needed if you're only submitting a custom request. I'll reach out about payment once it's confirmed.</p>
       <div class="pickups" id="payments"></div>
+      <div id="tipWrap">
+      <div style="margin-top:14px">
+        <button type="button" class="tipbtn" id="tipToggle" aria-expanded="false">💛 I'd like to be a blessing and leave a tip</button>
+      </div>
+      <div class="hidden" id="tipBox">
+        <div class="pickups" id="tipOpts"></div>
+        <div class="fields hidden" id="tipCustomWrap">
+          <label>Tip amount ($)<input id="f-tip" type="number" min="0" max="500" step="0.01" inputmode="decimal" placeholder="e.g. 5.00"></label>
+        </div>
+        <div class="hint">Tips are completely optional and so appreciated. Thank you! 💛</div>
+      </div>
+      </div>
     </div>
     <div class="card">
       <div class="step">Step 6 · Optional</div>
@@ -231,7 +250,8 @@ const $ = (id) => document.getElementById(id);
 const money = (n) => CONFIG.currency + n.toFixed(2);
 const DEMO = CONFIG.scriptUrl.startsWith("PASTE_");
 
-const state = { vipPct: 0, discSeq: 0, optedIn: false, optSeq: 0, pickup: null, payment: null, giftSel: new Set(), giftSig: null, qty: {}, menuSig: null,
+const TIP_PRESETS = [1, 2, 3];
+const state = { tipOn: false, tipChoice: null, vipPct: 0, discSeq: 0, optedIn: false, optSeq: 0, pickup: null, payment: null, giftSel: new Set(), giftSig: null, qty: {}, menuSig: null,
                 status: { capacity: {}, used: {}, pickupDate: "", menu: [] }, refs: {} };
 
 function h(tag, props, ...kids) {
@@ -271,6 +291,33 @@ const unitPrice = (it) => {
   return roundC(it.price * (1 - p / 100));
 };
 const fmtPct = (n) => String(Math.round(n * 100) / 100); // 10 -> "10", 12.5 -> "12.5"
+
+// Shows/hides the tip options to match state.tipOn, and clears the choice when the tip is turned off.
+function syncTip() {
+  if (!state.tipOn) {
+    state.tipChoice = null;
+    $("f-tip").value = "";
+    $("tipCustomWrap").classList.add("hidden");
+    [...$("tipOpts").children].forEach(l => { l.classList.remove("on"); l.querySelector("input").checked = false; });
+  }
+  $("tipBox").classList.toggle("hidden", !state.tipOn);
+  $("tipToggle").classList.toggle("on", state.tipOn);
+  $("tipToggle").setAttribute("aria-expanded", state.tipOn ? "true" : "false");
+}
+
+// The tip question is not shown for custom orders: a custom pickup, or a custom request with no menu items.
+function tipHidden() {
+  const anyItem = menuOf().some(c => c.items.some(it => (state.qty[it.id] || 0) > 0));
+  return !!((state.pickup && !state.pickup.limited) || (state.customReq && !anyItem));
+}
+
+// The tip the customer has chosen (0 if none). Presets are $1/$2/$3; "custom" reads the typed amount.
+function tipAmt() {
+  if (!state.tipOn || state.tipChoice === null || tipHidden()) return 0;
+  let v = state.tipChoice === "custom" ? parseFloat($("f-tip").value) : state.tipChoice;
+  if (!(v > 0)) return 0;
+  return roundC(Math.min(v, 500));
+}
 
 function plural(n, word) { return n + " " + word + (n === 1 ? "" : "s"); }
 
@@ -320,6 +367,28 @@ function build() {
   document.querySelectorAll("#whatsapp input").forEach(inp => inp.addEventListener("change", () => {
     document.querySelectorAll("#whatsapp label").forEach(l => l.classList.toggle("on", l.querySelector("input").checked));
   }));
+
+  // Tip: toggle button, then $1 / $2 / $3 / Custom
+  const tipOpts = $("tipOpts");
+  const tipChoices = TIP_PRESETS.map(n => ({ val: n, text: "$" + n })).concat([{ val: "custom", text: "Custom" }]);
+  tipChoices.forEach(c => {
+    const input = h("input", { type: "radio", name: "tip", value: String(c.val) });
+    const label = h("label", {}, input, c.text);
+    input.addEventListener("change", () => {
+      state.tipChoice = c.val;
+      [...tipOpts.children].forEach(l => l.classList.toggle("on", l === label));
+      $("tipCustomWrap").classList.toggle("hidden", c.val !== "custom");
+      if (c.val === "custom") $("f-tip").focus();
+      update();
+    });
+    tipOpts.append(label);
+  });
+  $("f-tip").addEventListener("input", update);
+  $("tipToggle").addEventListener("click", () => {
+    state.tipOn = !state.tipOn;
+    syncTip();
+    update();
+  });
 
   $("giftAll").addEventListener("click", () => {
     menuOf().forEach(cat => cat.items.forEach(it => { for (let n = 1; n <= (state.qty[it.id] || 0); n++) state.giftSel.add(it.id + "#" + n); }));
@@ -584,16 +653,23 @@ function update() {
     });
   });
   renderGiftList();
+  const hideTip = tipHidden();
+  if (hideTip && state.tipOn) { state.tipOn = false; syncTip(); }
+  $("tipWrap").classList.toggle("hidden", hideTip);
   const fee = $("f-gift").checked ? state.giftSel.size * cfg().giftFee : 0;
   const saved = roundC(wasSum - total);
-  $("total").textContent = money(roundC(total) + fee);
-  $("wasTotal").textContent = saved > 0 ? money(roundC(wasSum) + fee) : "";
+  const tip = tipAmt();
+  $("total").textContent = money(roundC(total) + fee + tip);
+  $("wasTotal").textContent = saved > 0 ? money(roundC(wasSum) + fee + tip) : "";
   $("totalBox").classList.toggle("saving", saved > 0);
   const note = $("totalNote");
   note.classList.toggle("save", saved > 0);
+  const incl = [];
+  if (fee) incl.push(money(fee) + " gift packaging");
+  if (tip) incl.push(money(tip) + " tip 💛");
   note.textContent = saved > 0
-    ? "You save " + money(saved) + (fee ? " · incl. " + money(fee) + " gift packaging" : "")
-    : (fee ? "Includes " + money(fee) + " gift packaging" : "Order total");
+    ? "You save " + money(saved) + (incl.length ? " · incl. " + incl.join(" + ") : "")
+    : (incl.length ? "Includes " + incl.join(" + ") : "Order total");
 }
 
 function showErr(t) { const e = $("err"); e.textContent = t; e.classList.remove("hidden"); e.scrollIntoView({ behavior: "smooth", block: "center" }); }
@@ -619,6 +695,8 @@ async function submit() {
   if (lines.length && !state.payment) return showErr("Please choose a payment method.");
   if (state.pickup.id === "Other" && !$("f-notes").value.trim()) return showErr("For a custom pickup, please add your preferred date and time in the Special Notes section.");
 
+  if (state.tipOn && state.tipChoice === "custom" && $("f-tip").value.trim() && !(parseFloat($("f-tip").value) > 0)) return showErr("Please enter a valid tip amount, or choose a different tip option.");
+  const tip = tipAmt(); // already 0 for custom orders
   const gift = $("f-gift").checked;
   if (gift && !state.giftSel.size) return showErr("Please choose which items are gifts, or uncheck the gift box.");
   const giftFee = gift ? state.giftSel.size * cfg().giftFee : 0;
@@ -627,10 +705,10 @@ async function submit() {
                     pickup: state.pickup.id, pickupDate: state.status.pickupDate || "",
                     payment: state.payment || "None yet (custom request)", customRequest: customReq,
                     whatsapp: state.optedIn ? "Already added" : ((document.querySelector("input[name=whatsapp]:checked") || {}).value || ""),
-                    gift, giftMessage: gift ? $("f-giftmsg").value.trim() : "", items: lines };
+                    gift, giftMessage: gift ? $("f-giftmsg").value.trim() : "", tip, items: lines };
   try {
     let res;
-    if (DEMO) res = { ok: true, orderId: "DEMO", total: roundC(lines.reduce((s, l) => s + l.qty * l.price, 0) + giftFee), savings: roundC(lines.reduce((s, l) => s + l.qty * (l.origPrice - l.price), 0)), giftFee, pickupDate: "" };
+    if (DEMO) res = { ok: true, orderId: "DEMO", total: roundC(lines.reduce((s, l) => s + l.qty * l.price, 0) + giftFee + tip), savings: roundC(lines.reduce((s, l) => s + l.qty * (l.origPrice - l.price), 0)), giftFee, tip, pickupDate: "" };
     else {
       // text/plain avoids a CORS preflight, which Apps Script can't answer
       const r = await fetch(CONFIG.scriptUrl, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) });
@@ -675,6 +753,7 @@ function finish(p, res) {
       }),
       p.customRequest ? row("1 × Custom request (see notes below)", money(0)) : "",
       res.giftFee ? row("Gift packaging × " + p.items.reduce((s, l) => s + (l.giftQty || 0), 0), money(res.giftFee)) : "",
+      res.tip > 0 ? row("Tip 💛 Thank you for being a blessing!", money(res.tip)) : "",
       res.savings > 0 ? h("div", { class: "save" }, h("span", {}, "You saved"), h("span", {}, "−" + money(res.savings))) : "",
       res.vip ? h("div", { style: "justify-content:flex-end;color:#2e7d32;font-size:.82rem;font-weight:600" }, h("span", {}, "💛 Receiving friends & family discount")) : "",
       row("Total", money(res.total), "border-top:1px solid var(--line);margin-top:6px;padding-top:6px;font-weight:700"),
