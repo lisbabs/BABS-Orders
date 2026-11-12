@@ -81,6 +81,21 @@
   .btn:hover{background:var(--accent-dark);border-color:var(--accent-dark)}
   .btn.alt{background:#fff;color:var(--accent-dark)}
   .btn.alt:hover{background:var(--warn-bg)}
+  /* ---- sale / discount styling ---- */
+  .sale-banner{background:linear-gradient(135deg,#6b4f3a,#8a6347);color:#fff;border-radius:14px;padding:16px 20px;margin-bottom:18px;text-align:center;box-shadow:0 4px 14px rgba(107,79,58,.25)}
+  .sale-banner .t{font-size:1.15rem;font-weight:700;letter-spacing:.01em}
+  .sale-banner .s{font-size:.85rem;opacity:.9;margin-top:2px}
+  .item .pr .was{color:#9a9a9a;font-weight:400;margin-right:6px;text-decoration:line-through;text-decoration-thickness:1.5px}
+  .item .pr .now{color:#b3261e;font-weight:700}
+  .item .pr .off{display:inline-block;margin-left:8px;font-size:.72rem;font-weight:700;letter-spacing:.03em;background:#b3261e;color:#fff;padding:1px 8px;border-radius:99px}
+  .item.soldout .pr .was,.item.soldout .pr .now{color:#9a9a9a}
+  .item.soldout .pr .off{background:#bdbdbd}
+  .total .was-total{display:none;font-size:.9rem;font-weight:400;color:#9a9a9a;text-decoration:line-through;margin-right:8px}
+  .total.saving .was-total{display:inline}
+  .total.saving #total{color:#b3261e}
+  .total small.save{color:#2e7d32;font-weight:600}
+  .sum .was{color:#9a9a9a;text-decoration:line-through;margin-right:6px}
+  .sum .save{color:#2e7d32;font-weight:600}
   .preview{pointer-events:none;user-select:none;opacity:.5;filter:grayscale(1)}
   .hidden{display:none!important}
   @media print{
@@ -94,6 +109,7 @@
 <div class="wrap" id="app">
   <img class="banner" src="banner.png" alt="Be A Blessing Sourdough: Where daily bread, wellness, &amp; faith come together">
   <div id="form">
+    <div class="sale-banner hidden" id="saleBanner"></div>
     <div class="notice hidden" id="notice"></div>
     <div class="card intro">
       <h2>Welcome to Be A Blessing Sourdough! 🍞✨</h2>
@@ -174,7 +190,7 @@
 
 <div class="bar" id="bar">
   <div class="bar-in">
-    <div class="total"><small id="totalNote">Order total</small><span id="total">$0.00</span></div>
+    <div class="total" id="totalBox"><small id="totalNote">Order total</small><span class="was-total" id="wasTotal"></span><span id="total">$0.00</span></div>
     <button class="go" id="submit">Place order</button>
   </div>
 </div>
@@ -191,6 +207,7 @@ const CONFIG = {
   title: "Be A Blessing Sourdough",
   currency: "$",
   giftFee: 2, // per item, when "Giving this as a gift" is checked
+  // (Discounts are set in the sheet: Settings tab "Site-wide discount (%)" and the Menu tab "Discount %" column.)
   // These are only fallbacks. The day, time, location, payments, fee and links come from the Settings tab of the sheet.
   pickupOptions: [
     { id: "Standard", label: "Porch Pickup", note: "limited weekly quantities", limited: true },
@@ -233,9 +250,14 @@ const cfg = () => Object.assign({
   pickupStyle: "Porch Pickup", location: "Deerwood, MN",
   locationNote: "(Exact porch pickup address provided upon order confirmation)",
   cutoffDays: 2, cutoffText: "6:00 PM",
-  giftFee: CONFIG.giftFee, payments: CONFIG.paymentOptions,
+  giftFee: CONFIG.giftFee, siteDiscount: 0, saleLabel: "Sale", payments: CONFIG.paymentOptions,
   venmoUrl: CONFIG.venmoUrl, whatsappUrl: CONFIG.whatsappUrl, fullMessage: CONFIG.fullMessage
 }, state.status.config || {});
+
+// What the customer pays for one item (sale price when discounted, otherwise the regular price).
+const unitPrice = (it) => (it.pct > 0 && typeof it.salePrice === "number") ? it.salePrice : it.price;
+const roundC = (n) => Math.round(n * 100) / 100;
+const fmtPct = (n) => String(Math.round(n * 100) / 100); // 10 -> "10", 12.5 -> "12.5"
 
 function plural(n, word) { return n + " " + word + (n === 1 ? "" : "s"); }
 
@@ -245,10 +267,10 @@ async function loadStatus() {
     state.status = { capacity: { "Traditional Sourdough Boules": 6 }, used: { "Traditional Sourdough Boules": 4 }, pickupDate: "",
       menu: [
         { name: "Traditional Sourdough Boules", items: [
-          { id: "b1", name: "Plain Rustic Boule", desc: "", price: 8, soldOut: false, left: null },
-          { id: "b2", name: "Chocolate Chip Boule", desc: "", price: 10, soldOut: true, left: null } ] },
+          { id: "b1", name: "Plain Rustic Boule", desc: "", price: 8, pct: 0, salePrice: 8, soldOut: false, left: null },
+          { id: "b2", name: "Chocolate Chip Boule", desc: "", price: 10, pct: 0, salePrice: 10, soldOut: true, left: null } ] },
         { name: "Holiday Bundles", items: [
-          { id: "h1", name: "Comfort & Joy", desc: "", price: 16, soldOut: false, left: 3 },
+          { id: "h1", name: "Comfort & Joy", desc: "", price: 16, pct: 25, salePrice: 12, soldOut: false, left: 3 },
           { id: "h2", name: "The Warm Starter Set", desc: "", price: 18, soldOut: false, left: 0 } ] }
       ] };
     return;
@@ -321,7 +343,7 @@ function renderPayments() {
 // Builds the menu cards from the sheet. Only rebuilds when the menu itself changed.
 function renderMenu() {
   const menu = menuOf();
-  const sig = JSON.stringify([cfg().fullMessage, menu.map(c => [c.name, c.items.map(i => [i.id, i.name, i.desc, i.price])])]);
+  const sig = JSON.stringify([cfg().fullMessage, menu.map(c => [c.name, c.items.map(i => [i.id, i.name, i.desc, i.price, i.pct, i.salePrice])])]);
   if (sig === state.menuSig) return;
   state.menuSig = sig;
 
@@ -352,7 +374,11 @@ function renderMenu() {
       const row = h("div", { class: "item" },
         h("div", {}, h("div", { class: "nm" }, it.name),
           it.desc ? h("div", { class: "ds" }, it.desc) : "",
-          h("div", { class: "pr" }, money(it.price), left)),
+          h("div", { class: "pr" },
+            it.pct > 0
+              ? [h("span", { class: "was" }, money(it.price)), h("span", { class: "now" }, money(unitPrice(it))), h("span", { class: "off" }, fmtPct(it.pct) + "% OFF")]
+              : money(it.price),
+            left)),
         h("div", { class: "stepper" }, minus, val, plus),
         h("span", { class: "soldtag" }, "Sold Out"));
       box.append(row);
@@ -464,6 +490,14 @@ function update() {
   });
   CONFIG.pickupOptions.forEach(o => o.el.classList.toggle("on", state.pickup === o));
 
+  // Site-wide sale banner (Settings tab: "Site-wide discount (%)" and "Sale name")
+  const sb = $("saleBanner"), sd = +cfg().siteDiscount || 0; sb.textContent = "";
+  if (sd > 0) {
+    sb.append(h("div", { class: "t" }, "🎉 " + (cfg().saleLabel || "Sale") + ": " + fmtPct(sd) + "% off!"),
+              h("div", { class: "s" }, "Sale prices are shown below, and your total updates as you order."));
+  }
+  sb.classList.toggle("hidden", !(sd > 0));
+
   const nb = $("notice"); nb.textContent = "";
   if (st.notice) nb.append(h("div", {}, st.notice));
   nb.classList.toggle("hidden", !st.notice);
@@ -495,7 +529,7 @@ function update() {
   if (state.pickup && !state.pickup.limited) hint = "Custom requests aren't guaranteed. I'll review yours and reach out to confirm before anything is final.";
   $("pickupHint").textContent = hint;
 
-  let total = 0;
+  let total = 0, wasSum = 0;
   menuOf().forEach(cat => {
     const r = state.refs[cat.name];
     if (!r) return;
@@ -527,13 +561,21 @@ function update() {
       const showLeft = !soldOut && lim !== Infinity;
       x.left.textContent = lim + " left";
       x.left.classList.toggle("hidden", !showLeft);
-      total += q * it.price;
+      total += q * unitPrice(it);
+      wasSum += q * it.price;
     });
   });
   renderGiftList();
   const fee = $("f-gift").checked ? state.giftSel.size * cfg().giftFee : 0;
-  $("total").textContent = money(total + fee);
-  $("totalNote").textContent = fee ? "Includes " + money(fee) + " gift packaging" : "Order total";
+  const saved = roundC(wasSum - total);
+  $("total").textContent = money(roundC(total) + fee);
+  $("wasTotal").textContent = saved > 0 ? money(roundC(wasSum) + fee) : "";
+  $("totalBox").classList.toggle("saving", saved > 0);
+  const note = $("totalNote");
+  note.classList.toggle("save", saved > 0);
+  note.textContent = saved > 0
+    ? "You save " + money(saved) + (fee ? " · incl. " + money(fee) + " gift packaging" : "")
+    : (fee ? "Includes " + money(fee) + " gift packaging" : "Order total");
 }
 
 function showErr(t) { const e = $("err"); e.textContent = t; e.classList.remove("hidden"); e.scrollIntoView({ behavior: "smooth", block: "center" }); }
@@ -544,7 +586,7 @@ async function submit() {
   const name = $("f-name").value.trim(), email = $("f-email").value.trim();
   const lines = [];
   menuOf().forEach(cat => cat.items.forEach(it => {
-    if (state.qty[it.id] > 0) lines.push({ id: it.id, category: cat.name, item: it.name, qty: state.qty[it.id], price: it.price,
+    if (state.qty[it.id] > 0) lines.push({ id: it.id, category: cat.name, item: it.name, qty: state.qty[it.id], price: unitPrice(it), origPrice: it.price, pct: it.pct || 0,
       giftQty: $("f-gift").checked ? [...state.giftSel].filter(k => k.startsWith(it.id + "#")).length : 0 });
   }));
   if (!state.pickup) return showErr("Please choose a pickup option.");
@@ -570,7 +612,7 @@ async function submit() {
                     gift, giftMessage: gift ? $("f-giftmsg").value.trim() : "", items: lines };
   try {
     let res;
-    if (DEMO) res = { ok: true, orderId: "DEMO", total: lines.reduce((s, l) => s + l.qty * l.price, 0) + giftFee, giftFee, pickupDate: "" };
+    if (DEMO) res = { ok: true, orderId: "DEMO", total: roundC(lines.reduce((s, l) => s + l.qty * l.price, 0) + giftFee), savings: roundC(lines.reduce((s, l) => s + l.qty * (l.origPrice - l.price), 0)), giftFee, pickupDate: "" };
     else {
       // text/plain avoids a CORS preflight, which Apps Script can't answer
       const r = await fetch(CONFIG.scriptUrl, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) });
@@ -608,9 +650,14 @@ function finish(p, res) {
       h("a", { href: cfg().venmoUrl, target: "_blank", rel: "noopener", style: "color:var(--accent-dark);font-weight:600" }, "Click here"),
       " to pay for your order through Venmo.") : "",
     h("div", { class: "sum" },
-      p.items.map(l => row(l.qty + " × " + l.item, money(l.qty * l.price))),
+      p.items.map(l => {
+        const r = row(l.qty + " × " + l.item + (l.pct > 0 ? " (" + fmtPct(l.pct) + "% off)" : ""), money(roundC(l.qty * l.price)));
+        if (l.pct > 0) r.lastChild.prepend(h("span", { class: "was" }, money(roundC(l.qty * l.origPrice))));
+        return r;
+      }),
       p.customRequest ? row("1 × Custom request (see notes below)", money(0)) : "",
       res.giftFee ? row("Gift packaging × " + p.items.reduce((s, l) => s + (l.giftQty || 0), 0), money(res.giftFee)) : "",
+      res.savings > 0 ? h("div", { class: "save" }, h("span", {}, "You saved"), h("span", {}, "−" + money(res.savings))) : "",
       row("Total", money(res.total), "border-top:1px solid var(--line);margin-top:6px;padding-top:6px;font-weight:700"),
       row("Pickup", p.pickup !== "Other" && !customOnly ? dayName(res.pickupDate) + (res.pickupDate ? " (" + fmtDate(res.pickupDate) + ")" : "") + (res.pickupTime ? ", " + res.pickupTime : "") : "Custom (see notes below)", "font-weight:700;margin-top:6px"),
       customOnly ? "" : row("Payment", p.payment, "color:var(--muted)"),
