@@ -28,7 +28,7 @@
   .pickups label.on{border-color:var(--accent);background:var(--warn-bg)}
   .pickups small{display:block;color:var(--muted);margin-left:24px}
   .hint{font-size:.85rem;color:var(--muted);margin-top:8px}
-  .cat-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px}
+  .cat-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px 10px;margin-bottom:6px}
   .badge{font-size:.78rem;background:var(--warn-bg);color:var(--warn-ink);padding:3px 10px;border-radius:99px;white-space:nowrap}
   .full-msg{background:var(--warn-bg);color:var(--warn-ink);border-radius:10px;padding:12px 14px;margin:8px 0;font-size:.92rem}
   .item{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
@@ -632,7 +632,7 @@ function update() {
     r.msg.classList.toggle("hidden", !full);
     r.box.classList.toggle("locked", !state.pickup || full);
     if (state.pickup && state.pickup.limited && rem !== Infinity && rem > 0) {
-      r.badge.textContent = rem + " left";
+      r.badge.textContent = rem + " left this week";
       r.badge.classList.remove("hidden");
     } else r.badge.classList.add("hidden");
 
