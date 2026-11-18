@@ -361,7 +361,13 @@ async function loadStatus() {
   }
   state.loaded = true;
 }
-
+// Show the two porch pickup buttons in date order (soonest first). Custom always stays last.
+const stdOpt = CONFIG.pickupOptions.find(o => o.limited && !o.second);
+const secOpt = CONFIG.pickupOptions.find(o => o.second);
+const custOpt = CONFIG.pickupOptions.find(o => !o.limited);
+const secondFirst = pick2() && st.pickupDate && pick2().date < st.pickupDate; // dates are YYYY-MM-DD, so they compare correctly as text
+[secondFirst ? secOpt : stdOpt, secondFirst ? stdOpt : secOpt, custOpt].forEach(o => $("pickups").append(o.el));
+  
 function build() {
   const pk = $("pickups");
   CONFIG.pickupOptions.forEach(o => {
