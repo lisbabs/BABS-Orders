@@ -361,13 +361,7 @@ async function loadStatus() {
   }
   state.loaded = true;
 }
-// Show the two porch pickup buttons in date order (soonest first). Custom always stays last.
-const stdOpt = CONFIG.pickupOptions.find(o => o.limited && !o.second);
-const secOpt = CONFIG.pickupOptions.find(o => o.second);
-const custOpt = CONFIG.pickupOptions.find(o => !o.limited);
-const secondFirst = pick2() && st.pickupDate && pick2().date < st.pickupDate; // dates are YYYY-MM-DD, so they compare correctly as text
-[secondFirst ? secOpt : stdOpt, secondFirst ? stdOpt : secOpt, custOpt].forEach(o => $("pickups").append(o.el));
-  
+
 function build() {
   const pk = $("pickups");
   CONFIG.pickupOptions.forEach(o => {
@@ -600,6 +594,10 @@ function update() {
     o.el.style.cursor = closed ? "not-allowed" : "";
     if (closed && state.pickup === o) { state.pickup = null; o.input.checked = false; }
   });
+  // Show the pickup buttons in date order (soonest first). Custom Pickup always stays last.
+  // Dates are YYYY-MM-DD, so they sort correctly as plain text.
+  const sortKey = (o) => !o.limited ? "9999-99-99" : o.second ? (pick2() ? pick2().date : "9999-99-98") : (st.pickupDate || "9999-99-97");
+  CONFIG.pickupOptions.slice().sort((a, b) => sortKey(a).localeCompare(sortKey(b))).forEach(o => { if (o.el) $("pickups").append(o.el); });
   CONFIG.pickupOptions.forEach(o => o.el.classList.toggle("on", state.pickup === o));
 
   // Site-wide sale banner (Settings tab: "Site-wide discount (%)" and "Sale name")
