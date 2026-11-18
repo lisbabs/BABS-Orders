@@ -584,7 +584,11 @@ function update() {
     const cc = cfg();
     o.text.textContent = (st.pickupDate ? dayName(st.pickupDate) + " " : "") + cc.pickupStyle;
     o.small.textContent = (st.pickupDate ? fmtDate(st.pickupDate) + " · " : "") +
-      (st.pickupTime ? st.pickupTime + " in " + cc.location + " · " : "") + o.note;
+      (st.pickupTime ? st.pickupTime + " in " + cc.location + " · " : "") + (closed ? "" : o.note);
+    if (closed) { // say why it can't be chosen, so it doesn't look broken or sold out
+      if (!st.pickupDate && !st.pickupTime) o.small.textContent = "";
+      o.small.append(h("strong", { style: "color:#b3261e" }, "Orders closed for this pickup"));
+    }
     o.input.disabled = closed;
     o.el.style.opacity = closed ? ".5" : "";
     o.el.style.cursor = closed ? "not-allowed" : "";
