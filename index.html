@@ -229,6 +229,7 @@ const CONFIG = {
   // These are only fallbacks. The day, time, location, payments, fee and links come from the Settings tab of the sheet.
   pickupOptions: [
     { id: "Standard", label: "Porch Pickup", note: "limited weekly quantities", limited: true },
+    { id: "Second", label: "Second Pickup", note: "limited weekly quantities", limited: true, second: true }, // only shows when a date is set in the sheet
     { id: "Other",     label: "Custom Pickup Day / Time",        note: "Request only, not guaranteed. Add your preferred date/time in the Special Notes section", limited: false }
   ],
   paymentOptions: [
@@ -263,6 +264,18 @@ function h(tag, props, ...kids) {
 }
 
 const menuOf = () => state.status.menu || [];
+
+// Optional second weekly pickup (Settings tab "Second pickup date"). null = the button is hidden.
+const pick2 = () => state.status.pickup2 || null;
+const isSecond = () => !!(state.pickup && state.pickup.second && pick2());
+const activeDate = () => isSecond() ? pick2().date : state.status.pickupDate;
+const activeTime = () => isSecond() ? pick2().time : state.status.pickupTime;
+const activeUsed = () => isSecond() ? (pick2().used || {}) : (state.status.used || {});
+const itemLeft = (it) => {
+  if (!isSecond()) return it.left;
+  const v = (pick2().left || {})[it.id];
+  return v === undefined ? null : v;
+};
 
 // Settings from the sheet (Settings tab, columns K-M) win; the values in CONFIG above are only fallbacks.
 const cfg = () => Object.assign({
@@ -496,17 +509,18 @@ function catLimit(cat) {
   if (!state.pickup || !state.pickup.limited) return Infinity;
   const cap = state.status.capacity[cat.name];
   if (cap === undefined || cap === null) return Infinity;
-  return Math.max(0, cap - (state.status.used[cat.name] || 0));
+  return Math.max(0, cap - (activeUsed()[cat.name] || 0));
 }
 
 // Remaining quantity for one item (its own limit from the Menu tab), or Infinity.
 // 0 means sold out (marked Sold Out in the sheet, or all of its quantity is ordered).
 function itemLimit(it) {
   if (it.soldOut) return 0;
-  if (it.left === null || it.left === undefined) return Infinity;
+  const left = itemLeft(it);
+  if (left === null || left === undefined) return Infinity;
   // weekly quantities only apply to Wednesday pickup; "Total" quantities (it.lifetime) apply to every pickup type
   if (state.pickup && !state.pickup.limited && !it.lifetime) return Infinity;
-  return it.left;
+  return left;
 }
 
 function fmtDate(iso) {
@@ -548,7 +562,7 @@ function update() {
   renderPayments();
   renderDynamicText();
   const st = state.status, closed = !!st.wedClosed;
-  const customClosed = !!st.customClosed, fullyClosed = closed && customClosed;
+  const customClosed = !!st.customClosed, fullyClosed = closed && customClosed && !pick2();
   CONFIG.pickupOptions.forEach(o => {
     if (o.limited) return;
     o.small.textContent = customClosed ? "Custom orders are not available this week." : o.note;
@@ -559,6 +573,14 @@ function update() {
   });
   CONFIG.pickupOptions.forEach(o => {
     if (!o.limited) return;
+    if (o.second) { // the optional second weekly pickup: not shown at all unless a date is set in the sheet
+      const p2 = pick2();
+      o.el.classList.toggle("hidden", !p2);
+      if (!p2) { if (state.pickup === o) state.pickup = null; o.input.checked = false; return; }
+      o.text.textContent = p2.dayName + " " + cfg().pickupStyle;
+      o.small.textContent = fmtDate(p2.date) + " · " + p2.time + " in " + cfg().location + " · " + o.note;
+      return;
+    }
     const cc = cfg();
     o.text.textContent = (st.pickupDate ? dayName(st.pickupDate) + " " : "") + cc.pickupStyle;
     o.small.textContent = (st.pickupDate ? fmtDate(st.pickupDate) + " · " : "") +
@@ -599,7 +621,7 @@ function update() {
   wn.classList.toggle("hidden", !st.weekNote || fullyClosed);
   // "The nearest pickup already closed" notice (wording comes from the Settings tab)
   // Hidden while "Custom Pickup Day / Time" is selected; shows again when the standard pickup is chosen (or nothing is chosen yet).
-  const customPicked = !!(state.pickup && !state.pickup.limited);
+  const customPicked = !!(state.pickup && (!state.pickup.limited || state.pickup.second));
   const sk = $("skipNote"), skMsg = st.skipped && st.skipped.message && !closed && !customPicked ? st.skipped.message : "";
   sk.textContent = skMsg;
   sk.classList.toggle("hidden", !skMsg);
@@ -610,7 +632,7 @@ function update() {
   $("bar").classList.toggle("hidden", fullyClosed);
 
   let hint = state.pickup || fullyClosed ? "" : "Choose a pickup option to start adding items.";
-  if (state.pickup && state.pickup.limited && st.pickupDate) hint = dayName(st.pickupDate) + " pickup: " + fmtDate(st.pickupDate) + (st.pickupTime ? ", " + st.pickupTime : "") + ".";
+  if (state.pickup && state.pickup.limited && activeDate()) hint = dayName(activeDate()) + " pickup: " + fmtDate(activeDate()) + (activeTime() ? ", " + activeTime() : "") + ".";
   if (state.pickup && !state.pickup.limited) hint = "Custom requests aren't guaranteed. I'll review yours and reach out to confirm before anything is final.";
   $("pickupHint").textContent = hint;
 
@@ -675,7 +697,7 @@ function update() {
 function showErr(t) { const e = $("err"); e.textContent = t; e.classList.remove("hidden"); e.scrollIntoView({ behavior: "smooth", block: "center" }); }
 
 async function submit() {
-  if (state.status.wedClosed && state.status.customClosed) return; // preview mode: orders are closed
+  if (state.status.wedClosed && state.status.customClosed && !pick2()) return; // preview mode: orders are closed
   $("err").classList.add("hidden");
   const name = $("f-name").value.trim(), email = $("f-email").value.trim();
   const lines = [];
@@ -702,7 +724,7 @@ async function submit() {
   const giftFee = gift ? state.giftSel.size * cfg().giftFee : 0;
   const btn = $("submit"); btn.disabled = true; btn.textContent = "Sending…";
   const payload = { name, email, phone, notes: $("f-notes").value.trim(),
-                    pickup: state.pickup.id, pickupDate: state.status.pickupDate || "",
+                    pickup: state.pickup.id, pickupDate: activeDate() || "",
                     payment: state.payment || "None yet (custom request)", customRequest: customReq,
                     whatsapp: state.optedIn ? "Already added" : ((document.querySelector("input[name=whatsapp]:checked") || {}).value || ""),
                     gift, giftMessage: gift ? $("f-giftmsg").value.trim() : "", tip, items: lines };
