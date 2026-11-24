@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Be A Blessing Sourdough | Order</title>
+<link rel="preconnect" href="https://script.google.com">
+<link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -348,7 +350,8 @@ async function loadStatus() {
   // Show the last menu this browser saw straight away (if it's less than a day old), then refresh it in the background.
   try {
     const saved = JSON.parse(localStorage.getItem("babs_status") || "null");
-    if (saved && saved.t && Date.now() - saved.t < 864e5 && saved.s && saved.s.menu) {
+    // (kept for 7 days: it is only a head start, and the fresh copy from the sheet replaces it a moment later)
+    if (saved && saved.t && Date.now() - saved.t < 6048e5 && saved.s && saved.s.menu) {
       state.status = saved.s; state.loaded = true; update();
     }
   } catch (e) { /* no saved copy: fine */ }
@@ -552,7 +555,8 @@ function renderDynamicText() {
   const lo = $("introLocation"); lo.textContent = "";
   lo.append("📍 ", h("strong", {}, "Pickup Location:"), " " + loc + (/[.!?)]$/.test(loc) ? "" : "."));
   // keep these two lines invisible until the real settings are known, so they don't visibly change after loading
-  [li, lo].forEach(e => { e.style.visibility = state.loaded || DEMO ? "" : "hidden"; });
+  // (hidden completely, not just invisible, so they don't leave big empty gaps while the sheet is still answering)
+  [li, lo].forEach(e => { e.classList.toggle("hidden", !(state.loaded || DEMO)); });
   document.querySelectorAll(".pickday").forEach(e => { e.textContent = day === "standard" ? "weekly" : day; });
   document.querySelectorAll(".giftfee").forEach(e => { e.textContent = money(c.giftFee); });
 }
